@@ -62,13 +62,20 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m *model) ServeHandler() {
+	statusChan := make(chan server.ServerStatus)
 	go func() {
-		err := server.Start()
-		if err != nil {
-			m.messages = append(m.messages, fmt.Sprintf("Server error: %v", err))
-		}
+		status := server.Start()
+		statusChan <- status
 	}()
-	m.messages = append(m.messages, "Server started")
+
+	status := <-statusChan
+	if status.Launched {
+		m.messages = append(m.messages, fmt.Sprintf("Server successfully launched on port %d", status.Port))
+	} else if status.Error != nil {
+		m.messages = append(m.messages, fmt.Sprintf("Server error: %v", status.Error))
+	} else {
+		m.messages = append(m.messages, fmt.Sprintf("Server already running on port %d", status.Port))
+	}
 }
 
 func (m *model) PlayHandler() {

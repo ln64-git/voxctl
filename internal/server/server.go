@@ -15,14 +15,22 @@ var (
 	serverLock    sync.Mutex
 )
 
-func Start() error {
-	// Lock to ensure thread safety while checking and updating serverRunning status
+type ServerStatus struct {
+	Launched bool
+	Port     int
+	Error    error
+}
+
+func Start() ServerStatus {
 	serverLock.Lock()
 	defer serverLock.Unlock()
 
-	// Check if the server is already running
 	if serverRunning {
-		return fmt.Errorf("server is already running")
+		return ServerStatus{
+			Launched: false,
+			Port:     3000, // or whatever the port is
+			Error:    nil,
+		}
 	}
 
 	// Initialize speech service and handler
@@ -49,5 +57,9 @@ func Start() error {
 	// Update serverRunning status
 	serverRunning = true
 
-	return nil
+	return ServerStatus{
+		Launched: true,
+		Port:     3000,
+		Error:    nil,
+	}
 }
