@@ -7,21 +7,16 @@ import (
 	"sync"
 
 	"github.com/gorilla/mux"
-	"github.com/ln64-git/voxctl/internal/handler"
-	"github.com/ln64-git/voxctl/internal/speech"
+	"github.com/ln64-git/voxctl/client/internal/speech"
+	"github.com/ln64-git/voxctl/server/internal/handler"
 )
 
 var (
 	serverRunning bool
 	serverLock    sync.Mutex
 	server        *http.Server
+	wg            sync.WaitGroup
 )
-
-type ServerStatus struct {
-	Launched bool
-	Port     int
-	Error    error
-}
 
 func Start() ServerStatus {
 	serverLock.Lock()
@@ -30,7 +25,7 @@ func Start() ServerStatus {
 	if serverRunning {
 		return ServerStatus{
 			Launched: false,
-			Port:     3000, // or whatever the port is
+			Port:     3000,
 			Error:    nil,
 		}
 	}
@@ -54,8 +49,10 @@ func Start() ServerStatus {
 		Handler: r,
 	}
 
-	// Start the HTTP server
+	// Start the HTTP server in a new goroutine
+	wg.Add(1)
 	go func() {
+		defer wg.Done()
 		err := server.ListenAndServe()
 		if err != nil && err != http.ErrServerClosed {
 			fmt.Printf("Failed to start server: %v\n", err)
@@ -84,6 +81,9 @@ func Stop() error {
 	if err != nil {
 		return err
 	}
+
+	// Wait for the server to stop
+	wg.Wait()
 
 	serverRunning = false
 	return nil

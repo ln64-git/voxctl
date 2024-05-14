@@ -7,7 +7,7 @@ import (
 	"net/http"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/ln64-git/voxctl/internal/server"
+	// "github.com/ln64-git/voxctl/client/internal/server"
 )
 
 func (m model) Init() tea.Cmd {
@@ -37,11 +37,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				choice := m.choices[m.selected]
 				switch choice {
 				case "serve":
-					m.ServeHandler()
+					// m.ServeHandler()
 				case "play":
 					m.PlayHandler()
 				case "stop":
-					m.StopHandler()
+					// m.StopHandler()
 				case "pause", "resume":
 					m.ControlHandler(choice)
 				case "clear":
@@ -63,22 +63,22 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m *model) ServeHandler() {
-	statusChan := make(chan server.ServerStatus)
-	go func() {
-		status := server.Start()
-		statusChan <- status
-	}()
+// func (m *model) ServeHandler() {
+// 	statusChan := make(chan server.ServerStatus)
+// 	go func() {
+// 		status := server.Start()
+// 		statusChan <- status
+// 	}()
 
-	status := <-statusChan
-	if status.Launched {
-		m.messages = append(m.messages, fmt.Sprintf("Server successfully launched on port %d", status.Port))
-	} else if status.Error != nil {
-		m.messages = append(m.messages, fmt.Sprintf("Server error: %v", status.Error))
-	} else {
-		m.messages = append(m.messages, fmt.Sprintf("Server already running on port %d", status.Port))
-	}
-}
+// 	status := <-statusChan
+// 	if status.Launched {
+// 		m.messages = append(m.messages, fmt.Sprintf("Server successfully launched on port %d", status.Port))
+// 	} else if status.Error != nil {
+// 		m.messages = append(m.messages, fmt.Sprintf("Server error: %v", status.Error))
+// 	} else {
+// 		m.messages = append(m.messages, fmt.Sprintf("Server already running on port %d", status.Port))
+// 	}
+// }
 
 func (m *model) PlayHandler() {
 	messageChan := make(chan string)
@@ -106,14 +106,14 @@ func (m *model) PlayHandler() {
 	}
 }
 
-func (m *model) StopHandler() {
-	err := server.Stop()
-	if err != nil {
-		m.messages = append(m.messages, fmt.Sprintf("Failed to stop server: %v", err))
-	} else {
-		m.messages = append(m.messages, "Server stopped")
-	}
-}
+// func (m *model) StopHandler() {
+// 	err := server.Stop()
+// 	if err != nil {
+// 		m.messages = append(m.messages, fmt.Sprintf("Failed to stop server: %v", err))
+// 	} else {
+// 		m.messages = append(m.messages, "Server stopped")
+// 	}
+// }
 
 func (m *model) ControlHandler(choice string) {
 	messageChan := make(chan string)
