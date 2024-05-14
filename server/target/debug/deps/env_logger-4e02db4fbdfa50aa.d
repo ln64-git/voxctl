@@ -1,0 +1,11 @@
+/home/ln64/Source/voxctl-go/server/target/debug/deps/libenv_logger-4e02db4fbdfa50aa.rmeta: /home/ln64/.cargo/registry/src/index.crates.io-6f17d22bba15001f/env_logger-0.11.3/src/lib.rs /home/ln64/.cargo/registry/src/index.crates.io-6f17d22bba15001f/env_logger-0.11.3/src/logger.rs /home/ln64/.cargo/registry/src/index.crates.io-6f17d22bba15001f/env_logger-0.11.3/src/fmt/mod.rs /home/ln64/.cargo/registry/src/index.crates.io-6f17d22bba15001f/env_logger-0.11.3/src/fmt/humantime.rs /home/ln64/.cargo/registry/src/index.crates.io-6f17d22bba15001f/env_logger-0.11.3/src/fmt/writer/mod.rs /home/ln64/.cargo/registry/src/index.crates.io-6f17d22bba15001f/env_logger-0.11.3/src/fmt/writer/buffer.rs /home/ln64/.cargo/registry/src/index.crates.io-6f17d22bba15001f/env_logger-0.11.3/src/fmt/writer/target.rs
+
+/home/ln64/Source/voxctl-go/server/target/debug/deps/env_logger-4e02db4fbdfa50aa.d: /home/ln64/.cargo/registry/src/index.crates.io-6f17d22bba15001f/env_logger-0.11.3/src/lib.rs /home/ln64/.cargo/registry/src/index.crates.io-6f17d22bba15001f/env_logger-0.11.3/src/logger.rs /home/ln64/.cargo/registry/src/index.crates.io-6f17d22bba15001f/env_logger-0.11.3/src/fmt/mod.rs /home/ln64/.cargo/registry/src/index.crates.io-6f17d22bba15001f/env_logger-0.11.3/src/fmt/humantime.rs /home/ln64/.cargo/registry/src/index.crates.io-6f17d22bba15001f/env_logger-0.11.3/src/fmt/writer/mod.rs /home/ln64/.cargo/registry/src/index.crates.io-6f17d22bba15001f/env_logger-0.11.3/src/fmt/writer/buffer.rs /home/ln64/.cargo/registry/src/index.crates.io-6f17d22bba15001f/env_logger-0.11.3/src/fmt/writer/target.rs
+
+/home/ln64/.cargo/registry/src/index.crates.io-6f17d22bba15001f/env_logger-0.11.3/src/lib.rs:
+/home/ln64/.cargo/registry/src/index.crates.io-6f17d22bba15001f/env_logger-0.11.3/src/logger.rs:
+/home/ln64/.cargo/registry/src/index.crates.io-6f17d22bba15001f/env_logger-0.11.3/src/fmt/mod.rs:
+/home/ln64/.cargo/registry/src/index.crates.io-6f17d22bba15001f/env_logger-0.11.3/src/fmt/humantime.rs:
+/home/ln64/.cargo/registry/src/index.crates.io-6f17d22bba15001f/env_logger-0.11.3/src/fmt/writer/mod.rs:
+/home/ln64/.cargo/registry/src/index.crates.io-6f17d22bba15001f/env_logger-0.11.3/src/fmt/writer/buffer.rs:
+/home/ln64/.cargo/registry/src/index.crates.io-6f17d22bba15001f/env_logger-0.11.3/src/fmt/writer/target.rs:
