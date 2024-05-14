@@ -37,65 +37,15 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				choice := m.choices[m.selected]
 				switch choice {
 				case "serve":
-					go func() {
-						err := server.Start()
-						if err != nil {
-							m.messages = append(m.messages, fmt.Sprintf("Server error: %v", err))
-						}
-					}()
-					m.messages = append(m.messages, "Server started")
+					m.ServeHandler()
 				case "play":
-					messageChan := make(chan string)
-					go func() {
-						payload := map[string]string{"text": m.textInput}
-						jsonPayload, _ := json.Marshal(payload)
-
-						resp, err := http.Post("http://localhost:3000/play", "application/json", bytes.NewBuffer(jsonPayload))
-						if err != nil {
-							messageChan <- fmt.Sprintf("Request error: %v", err)
-							close(messageChan)
-							return
-						}
-						defer resp.Body.Close()
-
-						if resp.StatusCode >= 200 && resp.StatusCode < 300 {
-							messageChan <- "play request successful"
-						} else {
-							messageChan <- fmt.Sprintf("Play request failed, status code: %d", resp.StatusCode)
-						}
-						close(messageChan)
-					}()
-					for msg := range messageChan {
-						m.messages = append(m.messages, msg)
-					}
-
+					m.PlayHandler()
 				case "stop", "pause", "resume":
-					messageChan := make(chan string)
-					go func() {
-						resp, err := http.Post(fmt.Sprintf("http://localhost:3000/%s", choice), "application/json", nil)
-						if err != nil {
-							messageChan <- fmt.Sprintf("Request error: %v", err)
-							close(messageChan)
-							return
-						}
-						defer resp.Body.Close()
-
-						if resp.StatusCode >= 200 && resp.StatusCode < 300 {
-							messageChan <- fmt.Sprintf("%s request successful", choice)
-						} else {
-							messageChan <- fmt.Sprintf("%s request failed, status code: %d", choice, resp.StatusCode)
-						}
-						close(messageChan)
-					}()
-					for msg := range messageChan {
-						m.messages = append(m.messages, msg)
-					}
+					m.ControlHandler(choice)
 				case "clear":
-					m.messages = nil
-					m.textInput = ""
+					m.ClearHandler()
 				}
 			}
-
 		default:
 			if m.inputFocused {
 				if msg.String() == "backspace" {
@@ -109,4 +59,68 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	}
 	return m, nil
+}
+
+func (m *model) ServeHandler() {
+	go func() {
+		err := server.Start()
+		if err != nil {
+			m.messages = append(m.messages, fmt.Sprintf("Server error: %v", err))
+		}
+	}()
+	m.messages = append(m.messages, "Server started")
+}
+
+func (m *model) PlayHandler() {
+	messageChan := make(chan string)
+	go func() {
+		payload := map[string]string{"text": m.textInput}
+		jsonPayload, _ := json.Marshal(payload)
+
+		resp, err := http.Post("http://localhost:3000/play", "application/json", bytes.NewBuffer(jsonPayload))
+		if err != nil {
+			messageChan <- fmt.Sprintf("Request error: %v", err)
+			close(messageChan)
+			return
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+			messageChan <- "play request successful"
+		} else {
+			messageChan <- fmt.Sprintf("Play request failed, status code: %d", resp.StatusCode)
+		}
+		close(messageChan)
+	}()
+	for msg := range messageChan {
+		m.messages = append(m.messages, msg)
+	}
+}
+
+func (m *model) ControlHandler(choice string) {
+	messageChan := make(chan string)
+	go func() {
+		resp, err := http.Post(fmt.Sprintf("http://localhost:3000/%s", choice), "application/json", nil)
+		if err != nil {
+			messageChan <- fmt.Sprintf("Request error: %v", err)
+			close(messageChan)
+			return
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+			messageChan <- fmt.Sprintf("%s request successful", choice)
+		} else {
+			messageChan <- fmt.Sprintf("%s request failed, status code: %d", choice, resp.StatusCode)
+		}
+		close(messageChan)
+	}()
+	for msg := range messageChan {
+		m.messages = append(m.messages, msg)
+	}
+}
+
+func (m *model) ClearHandler() {
+	m.messages = nil
+	m.textInput = ""
 }
