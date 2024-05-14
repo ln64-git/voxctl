@@ -1,0 +1,5 @@
+# Ignore folders named "target" anywhere in the directory structure
+**/target/
+
+# Ignore files with the extension ".env" anywhere in the directory structure
+**/*.env
