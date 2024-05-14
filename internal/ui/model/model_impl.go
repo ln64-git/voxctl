@@ -11,7 +11,7 @@ type model struct {
 
 func InitialModel() model {
 	return model{
-		choices:  []string{"serve", "play", "stop", "pause", "resume", "clear", "input"},
+		choices:  []string{"serve", "play", "pause", "resume", "clear", "stop", "input"},
 		selected: -1,
 	}
 }
