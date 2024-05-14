@@ -65,15 +65,28 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.messages = append(m.messages, "Server started")
 
 			case "play", "stop", "pause", "resume":
+				messageChan := make(chan string)
 				go func() {
+					messageChan <- "Making Post Request..."
 					resp, err := http.Post(fmt.Sprintf("http://localhost:3000/%s", choice), "application/json", nil)
 					if err != nil {
-						m.messages = append(m.messages, fmt.Sprintf("Request error: %v", err))
+						messageChan <- fmt.Sprintf("Request error: %v", err)
+						close(messageChan)
 						return
 					}
 					defer resp.Body.Close()
+
+					if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+						messageChan <- fmt.Sprintf("%s request succeeded", choice)
+					} else {
+						messageChan <- fmt.Sprintf("%s request failed, status code: %d", choice, resp.StatusCode)
+					}
+					close(messageChan)
 				}()
-				m.messages = append(m.messages, fmt.Sprintf("%s request sent", choice))
+
+				for msg := range messageChan {
+					m.messages = append(m.messages, msg)
+				}
 
 			case "clear":
 				m.messages = nil
