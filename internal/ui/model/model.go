@@ -40,7 +40,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.ServeHandler()
 				case "play":
 					m.PlayHandler()
-				case "stop", "pause", "resume":
+				case "stop":
+					m.StopHandler()
+				case "pause", "resume":
 					m.ControlHandler(choice)
 				case "clear":
 					m.ClearHandler()
@@ -101,6 +103,15 @@ func (m *model) PlayHandler() {
 	}()
 	for msg := range messageChan {
 		m.messages = append(m.messages, msg)
+	}
+}
+
+func (m *model) StopHandler() {
+	err := server.Stop()
+	if err != nil {
+		m.messages = append(m.messages, fmt.Sprintf("Failed to stop server: %v", err))
+	} else {
+		m.messages = append(m.messages, "Server stopped")
 	}
 }
 

@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"sync"
@@ -13,6 +14,7 @@ import (
 var (
 	serverRunning bool
 	serverLock    sync.Mutex
+	server        *http.Server
 )
 
 type ServerStatus struct {
@@ -46,10 +48,16 @@ func Start() ServerStatus {
 	r.HandleFunc("/resume", handler.Resume).Methods("POST")
 	r.HandleFunc("/stop", handler.Stop).Methods("POST")
 
+	// Create a new HTTP server
+	server = &http.Server{
+		Addr:    ":3000",
+		Handler: r,
+	}
+
 	// Start the HTTP server
 	go func() {
-		err := http.ListenAndServe(":3000", r)
-		if err != nil {
+		err := server.ListenAndServe()
+		if err != nil && err != http.ErrServerClosed {
 			fmt.Printf("Failed to start server: %v\n", err)
 		}
 	}()
@@ -62,4 +70,21 @@ func Start() ServerStatus {
 		Port:     3000,
 		Error:    nil,
 	}
+}
+
+func Stop() error {
+	serverLock.Lock()
+	defer serverLock.Unlock()
+
+	if !serverRunning {
+		return nil
+	}
+
+	err := server.Shutdown(context.Background())
+	if err != nil {
+		return err
+	}
+
+	serverRunning = false
+	return nil
 }
