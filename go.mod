@@ -1,10 +1,11 @@
-module github.com/ln64-git/voxctl/client
+module github.com/ln64-git/voxctl
 
 go 1.22.3
 
 require (
 	github.com/charmbracelet/bubbletea v0.26.2
 	github.com/charmbracelet/lipgloss v0.10.0
+	github.com/gorilla/mux v1.8.1
 )
 
 require (

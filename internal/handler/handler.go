@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/ln64-git/voxctl/client/internal/speech"
+	"github.com/ln64-git/voxctl/internal/speech"
 )
 
 type Handler struct {
