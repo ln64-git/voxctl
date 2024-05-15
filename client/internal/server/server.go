@@ -30,7 +30,7 @@ func Start(port int) ServerStatus {
 	if err != nil {
 		return NewServerStatus(port).WithError(err)
 	}
-	cargoTomlPath := filepath.Join(serverDir, "/../../../server/Cargo.toml")
+	cargoTomlPath := filepath.Join(serverDir, "/../server/Cargo.toml")
 
 	cmd := exec.Command("cargo", "run", "-q", "--manifest-path", cargoTomlPath)
 	cmd.Stdout = os.Stdout
