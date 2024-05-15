@@ -18,7 +18,7 @@ func NewService() *Service {
 	return &Service{}
 }
 
-func (s *Service) GetSpeechResponse(text, apiKey, region, voiceGender, voiceName string) error {
+func (s *Service) GetSpeechResponse(text, apiKey, region, voiceGender, voiceName string) ([]byte, error) {
 	s.apiKey = apiKey
 	s.region = region
 	s.voiceGender = voiceGender
@@ -30,13 +30,17 @@ func (s *Service) GetSpeechResponse(text, apiKey, region, voiceGender, voiceName
 	// Get the access token
 	tokenResp, err := http.Post(tokenURL, "", bytes.NewBuffer([]byte{}))
 	if err != nil {
-		return err
+		return nil, fmt.Errorf("failed to get access token: %v", err)
 	}
 	defer tokenResp.Body.Close()
 
+	if tokenResp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("failed to get access token: status code %d", tokenResp.StatusCode)
+	}
+
 	accessToken, err := io.ReadAll(tokenResp.Body)
 	if err != nil {
-		return err
+		return nil, fmt.Errorf("failed to read access token: %v", err)
 	}
 
 	// Make the text-to-speech request
@@ -44,28 +48,29 @@ func (s *Service) GetSpeechResponse(text, apiKey, region, voiceGender, voiceName
 
 	req, err := http.NewRequest("POST", ttsURL, bytes.NewBuffer([]byte(body)))
 	if err != nil {
-		return err
+		return nil, fmt.Errorf("failed to create TTS request: %v", err)
 	}
 	req.Header.Set("Content-Type", "application/ssml+xml")
+	req.Header.Set("X-Microsoft-OutputFormat", "audio-16khz-128kbitrate-mono-mp3")
 	req.Header.Set("Authorization", "Bearer "+string(accessToken))
 
 	client := &http.Client{}
 	ttsResp, err := client.Do(req)
 	if err != nil {
-		return err
+		return nil, fmt.Errorf("failed to make TTS request: %v", err)
 	}
 	defer ttsResp.Body.Close()
 
-	audioContent, err := io.ReadAll(ttsResp.Body)
-	if err != nil {
-		return err
+	if ttsResp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("TTS request failed: status code %d", ttsResp.StatusCode)
 	}
 
-	// Here, you can save the audioContent or stream it to the client
-	// For now, we'll just print it to the console
-	fmt.Printf("Azure speech response:\n%s\n", audioContent)
+	audioContent, err := io.ReadAll(ttsResp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read audio content: %v", err)
+	}
 
-	return nil
+	return audioContent, nil
 }
 
 func (s *Service) Pause() error {

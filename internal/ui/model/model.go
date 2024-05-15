@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -82,6 +83,7 @@ func (m *model) ServeHandler() {
 
 func (m *model) PlayHandler() {
 	messageChan := make(chan string)
+
 	go func() {
 		payload := map[string]string{"text": m.textInput}
 		jsonPayload, _ := json.Marshal(payload)
@@ -98,14 +100,22 @@ func (m *model) PlayHandler() {
 			messageChan <- "play request successful"
 		} else {
 			messageChan <- fmt.Sprintf("Play request failed, status code: %d", resp.StatusCode)
+
+			// Read the response body for more details
+			body, err := io.ReadAll(resp.Body)
+			if err != nil {
+				messageChan <- fmt.Sprintf("Failed to read response body: %v", err)
+			} else {
+				messageChan <- fmt.Sprintf("Response body: %s", string(body))
+			}
 		}
 		close(messageChan)
 	}()
+
 	for msg := range messageChan {
 		m.messages = append(m.messages, msg)
 	}
 }
-
 func (m *model) StopHandler() {
 	err := server.Stop()
 	if err != nil {
