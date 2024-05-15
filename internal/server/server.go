@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/gorilla/mux"
+	"github.com/ln64-git/voxctl/external/azure"
 	"github.com/ln64-git/voxctl/internal/handler"
 	"github.com/ln64-git/voxctl/internal/speech"
 )
@@ -35,18 +36,18 @@ func Start() ServerStatus {
 		}
 	}
 
-	// Initialize speech service and handler
-	speechService := speech.NewService()
-	handler := handler.NewHandler(speechService)
+	// Create a new Handler instance
+	speechService := speech.NewService(&azure.Service{})
+	h := handler.NewHandler(speechService)
 
-	// Create a new router
+	// Create a new mux.Router instance
 	r := mux.NewRouter()
 
 	// Register handler functions
-	r.HandleFunc("/play", handler.Play).Methods("POST")
-	r.HandleFunc("/pause", handler.Pause).Methods("POST")
-	r.HandleFunc("/resume", handler.Resume).Methods("POST")
-	r.HandleFunc("/stop", handler.Stop).Methods("POST")
+	r.HandleFunc("/play", h.Play).Methods("POST")
+	r.HandleFunc("/pause", h.Pause).Methods("POST")
+	r.HandleFunc("/resume", h.Resume).Methods("POST")
+	r.HandleFunc("/stop", h.Stop).Methods("POST")
 
 	// Create a new HTTP server
 	server = &http.Server{

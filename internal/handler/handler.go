@@ -1,54 +1,73 @@
 package handler
 
 import (
-	"encoding/json"
 	"net/http"
+	"os"
 
 	"github.com/ln64-git/voxctl/internal/speech"
 )
 
 type Handler struct {
-	speechService speech.Service
+	speechService *speech.Service
 }
 
-func NewHandler(speechService speech.Service) *Handler {
+func NewHandler(speechService *speech.Service) *Handler {
 	return &Handler{
 		speechService: speechService,
 	}
 }
 
 func (h *Handler) Play(w http.ResponseWriter, r *http.Request) {
-	var payload struct {
-		Text string `json:"text"`
+	text := r.FormValue("text")
+	apiKey := r.FormValue("apiKey")
+	region := r.FormValue("region")
+	voiceGender := r.FormValue("voiceGender")
+	voiceName := r.FormValue("voiceName")
+
+	if apiKey == "" {
+		apiKey = os.Getenv("AZURE_API_KEY")
 	}
-	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-		http.Error(w, "Invalid request payload", http.StatusBadRequest)
+	if region == "" {
+		region = "eastus"
+	}
+	if voiceGender == "" {
+		voiceGender = "Female"
+	}
+	if voiceName == "" {
+		voiceName = "en-US-JennyNeural"
+	}
+
+	err := h.speechService.Play(text, apiKey, region, voiceGender, voiceName)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-
-	h.speechService.Play(payload.Text)
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"status": "success"})
+	w.WriteHeader(http.StatusOK)
 }
 
 func (h *Handler) Pause(w http.ResponseWriter, r *http.Request) {
-	h.speechService.Pause()
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"status": "success"})
+	err := h.speechService.Pause()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
 }
 
 func (h *Handler) Resume(w http.ResponseWriter, r *http.Request) {
-	h.speechService.Resume()
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"status": "success"})
+	err := h.speechService.Resume()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
 }
 
 func (h *Handler) Stop(w http.ResponseWriter, r *http.Request) {
-	h.speechService.Stop()
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"status": "success"})
+	err := h.speechService.Stop()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
 }

@@ -1,30 +1,34 @@
 package speech
 
-type Service interface {
-	Play(text string)
-	Pause()
-	Resume()
-	Stop()
+type SpeechService interface {
+	GetSpeechResponse(text, apiKey, region, voiceGender, voiceName string) error
+	Pause() error
+	Resume() error
+	Stop() error
 }
 
-type service struct{}
-
-func NewService() Service {
-	return &service{}
+type Service struct {
+	speechService SpeechService
 }
 
-func (s *service) Play(text string) {
-	// Implement the logic to play the provided text
+func NewService(speechService SpeechService) *Service {
+	return &Service{
+		speechService: speechService,
+	}
 }
 
-func (s *service) Pause() {
-	// Implement the logic to pause the current playback
+func (s *Service) Play(text, apiKey, region, voiceGender, voiceName string) error {
+	return s.speechService.GetSpeechResponse(text, apiKey, region, voiceGender, voiceName)
 }
 
-func (s *service) Resume() {
-	// Implement the logic to resume the paused playback
+func (s *Service) Pause() error {
+	return s.speechService.Pause()
 }
 
-func (s *service) Stop() {
-	// Implement the logic to stop the current playback
+func (s *Service) Resume() error {
+	return s.speechService.Resume()
+}
+
+func (s *Service) Stop() error {
+	return s.speechService.Stop()
 }
