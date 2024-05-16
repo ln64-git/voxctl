@@ -14,11 +14,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
+
 		case "enter":
-			if m.textInput != "" {
+			if m.userInput != "" {
 				m.status = "Synthesizing..."
 				return m, tea.Cmd(func() tea.Msg {
-					audioData, err := azure.SynthesizeSpeech(m.subscriptionKey, m.region, m.textInput, m.voiceGender, m.voiceName)
+					audioData, err := azure.SynthesizeSpeech(m.azureSubscriptionKey, m.azureRegion, m.userInput, m.azureVoiceGender, m.azureVoiceName)
 					if err != nil {
 						return errMsg{err}
 					}
@@ -28,11 +29,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "ctrl+c":
 			return m, tea.Quit
 		case "backspace":
-			if len(m.textInput) > 0 {
-				m.textInput = m.textInput[:len(m.textInput)-1]
+			if len(m.userInput) > 0 {
+				m.userInput = m.userInput[:len(m.userInput)-1]
 			}
 		default:
-			m.textInput += msg.String()
+			m.userInput += msg.String()
 		}
 	case errMsg:
 		m.status = "Error"
@@ -48,7 +49,18 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		})
 	case playedMsg:
 		m.status = "Ready"
-		m.textInput = ""
+		m.userInput = ""
+	}
+
+	if m.userAction == "play" && m.status == "Ready" {
+		m.status = "Synthesizing..."
+		return m, tea.Cmd(func() tea.Msg {
+			audioData, err := azure.SynthesizeSpeech(m.azureSubscriptionKey, m.azureRegion, m.userInput, m.azureVoiceGender, m.azureVoiceName)
+			if err != nil {
+				return errMsg{err}
+			}
+			return synthMsg{audioData}
+		})
 	}
 	return m, nil
 }

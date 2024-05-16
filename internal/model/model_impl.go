@@ -8,32 +8,35 @@ import (
 )
 
 type model struct {
-	textInput       string
-	voiceGender     string
-	voiceName       string
-	status          string
-	err             error
-	subscriptionKey string
-	region          string
+	userAction           string
+	userInput            string
+	azureSubscriptionKey string
+	azureRegion          string
+	azureVoiceGender     string
+	azureVoiceName       string
+	status               string
+	err                  error
 }
 
-func InitialModel() model {
+func InitialModel(action, input string) model {
 	err := godotenv.Load()
 	if err != nil {
 		fmt.Println("Error loading .env file:", err)
 	}
+
 	voiceGender := os.Getenv("VOICE_GENDER")
 	voiceName := os.Getenv("VOICE_NAME")
 	subscriptionKey := os.Getenv("AZURE_SUBSCRIPTION_KEY")
 	region := os.Getenv("AZURE_REGION")
 
 	return model{
-		textInput:       "",
-		voiceGender:     voiceGender,
-		voiceName:       voiceName,
-		status:          "Ready",
-		err:             nil,
-		subscriptionKey: subscriptionKey,
-		region:          region,
+		userAction:           action,
+		userInput:            input,
+		azureSubscriptionKey: subscriptionKey,
+		azureRegion:          region,
+		azureVoiceGender:     voiceGender,
+		azureVoiceName:       voiceName,
+		status:               "Ready",
+		err:                  nil,
 	}
 }
