@@ -5,7 +5,7 @@ import (
 	"os"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/ln64-git/voxctl/internal/ui/model"
+	"github.com/ln64-git/voxctl/internal/model"
 )
 
 func main() {
