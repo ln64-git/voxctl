@@ -10,6 +10,7 @@ import (
 type model struct {
 	userAction           string
 	userInput            string
+	userPort             int
 	azureSubscriptionKey string
 	azureRegion          string
 	azureVoiceGender     string
@@ -18,7 +19,7 @@ type model struct {
 	err                  error
 }
 
-func InitialModel(action, input string) model {
+func InitialModel(action, input string, port int) model {
 	err := godotenv.Load()
 	if err != nil {
 		fmt.Println("Error loading .env file:", err)
@@ -32,6 +33,7 @@ func InitialModel(action, input string) model {
 	return model{
 		userAction:           action,
 		userInput:            input,
+		userPort:             port,
 		azureSubscriptionKey: subscriptionKey,
 		azureRegion:          region,
 		azureVoiceGender:     voiceGender,

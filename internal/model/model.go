@@ -1,9 +1,12 @@
 package model
 
 import (
+	"fmt"
+	"net/http"
+	"strings"
+
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/ln64-git/voxctl/external/azure"
-	"github.com/ln64-git/voxctl/internal/audio"
+	"github.com/ln64-git/voxctl/internal/server"
 )
 
 func (m model) Init() tea.Cmd {
@@ -14,16 +17,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
-
 		case "enter":
 			if m.userInput != "" {
 				m.status = "Synthesizing..."
 				return m, tea.Cmd(func() tea.Msg {
-					audioData, err := azure.SynthesizeSpeech(m.azureSubscriptionKey, m.azureRegion, m.userInput, m.azureVoiceGender, m.azureVoiceName)
-					if err != nil {
-						return errMsg{err}
-					}
-					return synthMsg{audioData}
+					return m.sendPlayRequest()
 				})
 			}
 		case "ctrl+c":
@@ -38,33 +36,47 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case errMsg:
 		m.status = "Error"
 		m.err = msg.err
-	case synthMsg:
-		m.status = "Playing"
-		return m, tea.Cmd(func() tea.Msg {
-			err := audio.PlayAudio(msg.audioData)
-			if err != nil {
-				return errMsg{err}
-			}
-			return playedMsg{}
-		})
+		return m, nil
 	case playedMsg:
 		m.status = "Ready"
 		m.userInput = ""
+		return m, nil
 	}
 
 	if m.userAction == "play" && m.status == "Ready" {
 		m.status = "Synthesizing..."
 		return m, tea.Cmd(func() tea.Msg {
-			audioData, err := azure.SynthesizeSpeech(m.azureSubscriptionKey, m.azureRegion, m.userInput, m.azureVoiceGender, m.azureVoiceName)
-			if err != nil {
-				return errMsg{err}
-			}
-			return synthMsg{audioData}
+			return m.sendPlayRequest()
 		})
 	}
+
+	if m.userAction == "serve" && m.status == "Ready" {
+		m.status = "Starting server..."
+		go server.StartServer(m.userPort, m.azureSubscriptionKey, m.azureRegion)
+		m.status = "Ready"
+		m.userAction = "play"
+	}
+
 	return m, nil
 }
 
+func (m model) sendPlayRequest() tea.Msg {
+	req := server.PlayRequest{
+		Text:      m.userInput,
+		Gender:    m.azureVoiceGender,
+		VoiceName: m.azureVoiceName,
+	}
+	resp, err := http.Post(fmt.Sprintf("http://localhost:%d/play", m.userPort), "application/json", strings.NewReader(req.ToJSON()))
+	if err != nil {
+		return errMsg{err}
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return errMsg{fmt.Errorf("server returned status code %d", resp.StatusCode)}
+	}
+	return playedMsg{}
+}
+
 type errMsg struct{ err error }
-type synthMsg struct{ audioData []byte }
 type playedMsg struct{}
