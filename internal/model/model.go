@@ -33,28 +33,30 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		default:
 			m.userInput += msg.String()
 		}
+
 	case errMsg:
 		m.status = "Error"
 		m.err = msg.err
 		return m, nil
+
 	case playedMsg:
 		m.status = "Ready"
 		m.userInput = ""
 		return m, nil
+
+	case statusMsg:
+		m.status = msg.status
+		return m, nil
 	}
 
-	if m.userAction == "play" && m.status == "Ready" {
-		m.status = "Synthesizing..."
+	// Consume status updates from the statusCh channel
+	select {
+	case status := <-m.statusCh:
 		return m, tea.Cmd(func() tea.Msg {
-			return m.sendPlayRequest()
+			return statusMsg{status}
 		})
-	}
-
-	if m.userAction == "serve" && m.status == "Ready" {
-		m.status = "Starting server..."
-		go server.StartServer(m.userPort, m.azureSubscriptionKey, m.azureRegion)
-		m.status = "Ready"
-		m.userAction = "play"
+	default:
+		// No status update available, continue with normal processing
 	}
 
 	return m, nil
@@ -80,3 +82,6 @@ func (m model) sendPlayRequest() tea.Msg {
 
 type errMsg struct{ err error }
 type playedMsg struct{}
+type statusMsg struct {
+	status string
+}

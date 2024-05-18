@@ -5,10 +5,10 @@ import (
 	"os"
 
 	"github.com/joho/godotenv"
+	"github.com/ln64-git/voxctl/internal/server"
 )
 
 type model struct {
-	userAction           string
 	userInput            string
 	userPort             int
 	azureSubscriptionKey string
@@ -17,9 +17,10 @@ type model struct {
 	azureVoiceName       string
 	status               string
 	err                  error
+	statusCh             <-chan string
 }
 
-func InitialModel(action, input string, port int) model {
+func InitialModel(input string, port int) model {
 	err := godotenv.Load()
 	if err != nil {
 		fmt.Println("Error loading .env file:", err)
@@ -30,15 +31,17 @@ func InitialModel(action, input string, port int) model {
 	subscriptionKey := os.Getenv("AZURE_SUBSCRIPTION_KEY")
 	region := os.Getenv("AZURE_REGION")
 
+	statusCh := server.StartServer(port, subscriptionKey, region)
+
 	return model{
-		userAction:           action,
 		userInput:            input,
 		userPort:             port,
 		azureSubscriptionKey: subscriptionKey,
 		azureRegion:          region,
 		azureVoiceGender:     voiceGender,
 		azureVoiceName:       voiceName,
-		status:               "Ready",
+		status:               "Server starting...",
 		err:                  nil,
+		statusCh:             statusCh,
 	}
 }
