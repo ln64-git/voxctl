@@ -14,6 +14,14 @@ func (m model) Init() tea.Cmd {
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	m.state.SetStatus("Ready")
+	if m.userRequest {
+		if m.userInput != "" {
+			m.sendPlayRequest()
+			m.userInput = ""
+			m.userRequest = false
+		}
+	}
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
@@ -61,6 +69,7 @@ func (m model) sendPlayRequest() tea.Msg {
 	if resp.StatusCode != http.StatusOK {
 		return errMsg{fmt.Errorf("server returned status code %d", resp.StatusCode)}
 	}
+
 	return playedMsg{}
 }
 

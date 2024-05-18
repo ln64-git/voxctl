@@ -10,6 +10,7 @@ import (
 )
 
 type model struct {
+	userRequest          bool
 	userInput            string
 	userPort             int
 	azureSubscriptionKey string
@@ -31,10 +32,18 @@ func InitialModel(input string, port int) model {
 	subscriptionKey := os.Getenv("AZURE_SUBSCRIPTION_KEY")
 	region := os.Getenv("AZURE_REGION")
 
-	state := &types.State{Status: "Server starting..."}
+	state := &types.State{Status: "Starting..."}
+	userRequest := false
+
+	if input != "" {
+		state.Status = "Synthesizing..."
+		userRequest = true
+	}
+
 	go server.StartServer(port, subscriptionKey, region, state)
 
 	return model{
+		userRequest:          userRequest,
 		userInput:            input,
 		userPort:             port,
 		azureSubscriptionKey: subscriptionKey,
