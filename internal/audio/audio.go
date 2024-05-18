@@ -17,6 +17,7 @@ type AudioPlayer struct {
 	mutex      sync.Mutex
 	ctrl       *beep.Ctrl
 	done       chan struct{}
+	format     beep.Format
 }
 
 func NewAudioPlayer() *AudioPlayer {
@@ -54,11 +55,14 @@ func (ap *AudioPlayer) playNext() {
 	}
 	defer audioStreamer.Close()
 
-	err = speaker.Init(format.SampleRate, format.SampleRate.N(time.Second/10))
-	if err != nil {
-		fmt.Printf("Failed to initialize speaker: %v\n", err)
-		ap.playNextIfAvailable()
-		return
+	if ap.format == (beep.Format{}) {
+		ap.format = format
+		err = speaker.Init(format.SampleRate, format.SampleRate.N(time.Second/10))
+		if err != nil {
+			fmt.Printf("Failed to initialize speaker: %v\n", err)
+			ap.playNextIfAvailable()
+			return
+		}
 	}
 
 	ap.ctrl = &beep.Ctrl{Streamer: audioStreamer, Paused: false}
