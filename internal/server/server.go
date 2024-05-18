@@ -8,6 +8,7 @@ import (
 
 	"github.com/ln64-git/voxctl/external/azure"
 	"github.com/ln64-git/voxctl/internal/audio"
+	"github.com/ln64-git/voxctl/internal/types"
 )
 
 type PlayRequest struct {
@@ -20,8 +21,7 @@ func (r PlayRequest) ToJSON() string {
 	return fmt.Sprintf(`{"text":"%s","gender":"%s","voiceName":"%s"}`, r.Text, r.Gender, r.VoiceName)
 }
 
-func StartServer(port int, azureSubscriptionKey, azureRegion string) <-chan string {
-	statusCh := make(chan string)
+func StartServer(port int, azureSubscriptionKey, azureRegion string, state *types.State) {
 
 	go func() {
 		http.HandleFunc("/play", func(w http.ResponseWriter, r *http.Request) {
@@ -52,17 +52,12 @@ func StartServer(port int, azureSubscriptionKey, azureRegion string) <-chan stri
 			w.WriteHeader(http.StatusOK)
 			fmt.Fprint(w, "Speech synthesized and played successfully")
 		})
-
 		addr := ":" + strconv.Itoa(port)
-
 		err := http.ListenAndServe(addr, nil)
 		if err != nil {
-			statusCh <- fmt.Sprintf("Failed to start server: %v", err)
+			state.SetStatus(fmt.Sprintf("Failed to start server: %v", err))
 			return
 		}
-
-		statusCh <- fmt.Sprintf("Server started successfully on %s", addr)
+		state.SetStatus(fmt.Sprintf("Server started successfully on %s", addr))
 	}()
-
-	return statusCh
 }

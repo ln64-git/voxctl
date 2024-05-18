@@ -6,6 +6,7 @@ import (
 
 	"github.com/joho/godotenv"
 	"github.com/ln64-git/voxctl/internal/server"
+	"github.com/ln64-git/voxctl/internal/types"
 )
 
 type model struct {
@@ -15,9 +16,8 @@ type model struct {
 	azureRegion          string
 	azureVoiceGender     string
 	azureVoiceName       string
-	status               string
 	err                  error
-	statusCh             <-chan string
+	state                *types.State
 }
 
 func InitialModel(input string, port int) model {
@@ -31,7 +31,8 @@ func InitialModel(input string, port int) model {
 	subscriptionKey := os.Getenv("AZURE_SUBSCRIPTION_KEY")
 	region := os.Getenv("AZURE_REGION")
 
-	statusCh := server.StartServer(port, subscriptionKey, region)
+	state := &types.State{Status: "Server starting..."}
+	go server.StartServer(port, subscriptionKey, region, state)
 
 	return model{
 		userInput:            input,
@@ -40,8 +41,7 @@ func InitialModel(input string, port int) model {
 		azureRegion:          region,
 		azureVoiceGender:     voiceGender,
 		azureVoiceName:       voiceName,
-		status:               "Server starting...",
 		err:                  nil,
-		statusCh:             statusCh,
+		state:                state,
 	}
 }

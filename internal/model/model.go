@@ -19,7 +19,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "enter":
 			if m.userInput != "" {
-				m.status = "Synthesizing..."
+				m.state.SetStatus("Synthesizing...")
 				return m, tea.Cmd(func() tea.Msg {
 					return m.sendPlayRequest()
 				})
@@ -33,30 +33,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		default:
 			m.userInput += msg.String()
 		}
-
 	case errMsg:
-		m.status = "Error"
+		m.state.SetStatus("Error")
 		m.err = msg.err
 		return m, nil
-
 	case playedMsg:
-		m.status = "Ready"
+		m.state.SetStatus("Ready")
 		m.userInput = ""
 		return m, nil
-
-	case statusMsg:
-		m.status = msg.status
-		return m, nil
-	}
-
-	// Consume status updates from the statusCh channel
-	select {
-	case status := <-m.statusCh:
-		return m, tea.Cmd(func() tea.Msg {
-			return statusMsg{status}
-		})
-	default:
-		// No status update available, continue with normal processing
 	}
 
 	return m, nil
@@ -82,6 +66,3 @@ func (m model) sendPlayRequest() tea.Msg {
 
 type errMsg struct{ err error }
 type playedMsg struct{}
-type statusMsg struct {
-	status string
-}
