@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/joho/godotenv"
+	"github.com/ln64-git/voxctl/internal/audio"
 	"github.com/ln64-git/voxctl/internal/server"
 	"github.com/ln64-git/voxctl/internal/types"
 )
@@ -32,13 +33,10 @@ func InitialModel(input string, port int) model {
 	subscriptionKey := os.Getenv("AZURE_SUBSCRIPTION_KEY")
 	region := os.Getenv("AZURE_REGION")
 
-	state := &types.State{Status: "Starting..."}
 	userRequest := false
 
-	if input != "" {
-		state.Status = "Synthesizing..."
-		userRequest = true
-	}
+	audioPlayer := audio.NewAudioPlayer()
+	state := &types.State{AudioPlayer: audioPlayer, Status: "Starting..."}
 
 	go server.StartServer(port, subscriptionKey, region, state)
 

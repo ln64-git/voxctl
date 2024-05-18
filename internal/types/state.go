@@ -1,10 +1,15 @@
 package types
 
-import "sync"
+import (
+	"sync"
+
+	"github.com/ln64-git/voxctl/internal/audio"
+)
 
 type State struct {
-	Status string
-	mu     sync.Mutex
+	AudioPlayer *audio.AudioPlayer
+	Status      string
+	mu          sync.Mutex
 }
 
 func (s *State) SetStatus(status string) {

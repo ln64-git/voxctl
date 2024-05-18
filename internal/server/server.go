@@ -7,7 +7,6 @@ import (
 	"strconv"
 
 	"github.com/ln64-git/voxctl/external/azure"
-	"github.com/ln64-git/voxctl/internal/audio"
 	"github.com/ln64-git/voxctl/internal/types"
 )
 
@@ -41,14 +40,20 @@ func StartServer(port int, azureSubscriptionKey, azureRegion string, state *type
 				return
 			}
 
-			err = audio.PlayAudio(audioData)
-			if err != nil {
-				http.Error(w, fmt.Sprintf("Failed to play audio: %v", err), http.StatusInternalServerError)
+			if len(audioData) == 0 {
+				http.Error(w, "Empty audio data received from Azure", http.StatusInternalServerError)
+				return
+			}
+
+			if state.AudioPlayer != nil {
+				state.AudioPlayer.Play(audioData)
+			} else {
+				http.Error(w, "AudioPlayer not initialized", http.StatusInternalServerError)
 				return
 			}
 
 			w.WriteHeader(http.StatusOK)
-			fmt.Fprint(w, "Speech synthesized and played successfully")
+			fmt.Fprint(w, "Speech synthesized and added to the queue")
 		})
 		addr := ":" + strconv.Itoa(port)
 		err := http.ListenAndServe(addr, nil)
