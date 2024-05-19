@@ -18,6 +18,7 @@ type AudioPlayer struct {
 	ctrl       *beep.Ctrl
 	done       chan struct{}
 	format     beep.Format
+	isPlaying  bool
 }
 
 func NewAudioPlayer() *AudioPlayer {
@@ -33,16 +34,23 @@ func (ap *AudioPlayer) Play(audioData []byte) {
 
 	ap.audioQueue = append(ap.audioQueue, audioData)
 
-	if len(ap.audioQueue) == 1 {
+	if !ap.isPlaying {
+		ap.isPlaying = true
 		go ap.playNext()
 	}
 }
 
 func (ap *AudioPlayer) playNext() {
 	ap.mutex.Lock()
+	defer ap.mutex.Unlock()
+
+	if len(ap.audioQueue) == 0 {
+		ap.isPlaying = false
+		return
+	}
+
 	audioData := ap.audioQueue[0]
 	ap.audioQueue = ap.audioQueue[1:]
-	ap.mutex.Unlock()
 
 	audioReader := bytes.NewReader(audioData)
 	audioReadCloser := io.NopCloser(audioReader)
@@ -57,7 +65,7 @@ func (ap *AudioPlayer) playNext() {
 
 	if ap.format == (beep.Format{}) {
 		ap.format = format
-		err = speaker.Init(format.SampleRate, format.SampleRate.N(time.Second/10))
+		err = speaker.Init(ap.format.SampleRate, ap.format.SampleRate.N(time.Second/10))
 		if err != nil {
 			fmt.Printf("Failed to initialize speaker: %v\n", err)
 			ap.playNextIfAvailable()
@@ -66,28 +74,44 @@ func (ap *AudioPlayer) playNext() {
 	}
 
 	ap.ctrl = &beep.Ctrl{Streamer: audioStreamer, Paused: false}
+
+	var wg sync.WaitGroup
+	wg.Add(1)
 	speaker.Play(beep.Seq(ap.ctrl, beep.Callback(func() {
-		ap.playNextIfAvailable()
+		wg.Done()
 	})))
 
-	<-ap.done
+	go func() {
+		wg.Wait()
+		ap.playNextIfAvailable()
+	}()
 }
 
 func (ap *AudioPlayer) playNextIfAvailable() {
 	ap.mutex.Lock()
+	defer ap.mutex.Unlock()
+
 	if len(ap.audioQueue) > 0 {
+		ap.isPlaying = true
 		go ap.playNext()
+	} else {
+		ap.isPlaying = false
 	}
-	ap.mutex.Unlock()
 }
 
 func (ap *AudioPlayer) Pause() {
+	ap.mutex.Lock()
+	defer ap.mutex.Unlock()
+
 	if ap.ctrl != nil {
 		ap.ctrl.Paused = true
 	}
 }
 
 func (ap *AudioPlayer) Resume() {
+	ap.mutex.Lock()
+	defer ap.mutex.Unlock()
+
 	if ap.ctrl != nil {
 		ap.ctrl.Paused = false
 	}
@@ -95,11 +119,17 @@ func (ap *AudioPlayer) Resume() {
 
 func (ap *AudioPlayer) Stop() {
 	speaker.Lock()
+	defer speaker.Unlock()
+
+	ap.mutex.Lock()
+	defer ap.mutex.Unlock()
+
 	if ap.ctrl != nil {
 		if closer, ok := ap.ctrl.Streamer.(io.Closer); ok {
 			closer.Close()
 		}
 		ap.done <- struct{}{}
+		ap.isPlaying = false
+		ap.audioQueue = nil
 	}
-	speaker.Unlock()
 }
