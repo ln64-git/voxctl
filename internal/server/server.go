@@ -34,21 +34,9 @@ func StartServer(port int, azureSubscriptionKey, azureRegion string, state *type
 				return
 			}
 
-			audioData, err := azure.SynthesizeSpeech(azureSubscriptionKey, azureRegion, req.Text, req.Gender, req.VoiceName)
+			err = parseAndPlay(req, azureSubscriptionKey, azureRegion, state)
 			if err != nil {
-				http.Error(w, fmt.Sprintf("Failed to synthesize speech: %v", err), http.StatusInternalServerError)
-				return
-			}
-
-			if len(audioData) == 0 {
-				http.Error(w, "Empty audio data received from Azure", http.StatusInternalServerError)
-				return
-			}
-
-			if state.AudioPlayer != nil {
-				state.AudioPlayer.Play(audioData)
-			} else {
-				http.Error(w, "AudioPlayer not initialized", http.StatusInternalServerError)
+				http.Error(w, fmt.Sprintf("Failed to play audio: %v", err), http.StatusInternalServerError)
 				return
 			}
 
@@ -62,4 +50,39 @@ func StartServer(port int, azureSubscriptionKey, azureRegion string, state *type
 		}
 		state.SetStatus("Ready")
 	}()
+}
+
+func parseAndPlay(req PlayRequest, azureSubscriptionKey, azureRegion string, state *types.State) error {
+	var sentences []string
+	var currentSentence string
+	for i, char := range req.Text {
+		if char == ',' {
+			sentences = append(sentences, currentSentence)
+			currentSentence = ""
+		} else {
+			currentSentence += string(char)
+			if i == len(req.Text)-1 {
+				sentences = append(sentences, currentSentence)
+			}
+		}
+	}
+
+	for _, sentence := range sentences {
+		audioData, err := azure.SynthesizeSpeech(azureSubscriptionKey, azureRegion, sentence, req.Gender, req.VoiceName)
+		if err != nil {
+			return fmt.Errorf("failed to synthesize speech for sentence '%s': %v", sentence, err)
+		}
+
+		if len(audioData) == 0 {
+			return fmt.Errorf("empty audio data received from Azure for sentence '%s'", sentence)
+		}
+
+		if state.AudioPlayer != nil {
+			state.AudioPlayer.Play(audioData)
+		} else {
+			return fmt.Errorf("AudioPlayer not initialized")
+		}
+	}
+
+	return nil
 }

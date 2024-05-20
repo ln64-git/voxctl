@@ -6,6 +6,7 @@ require (
 	github.com/Microsoft/cognitive-services-speech-sdk-go v1.33.0 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/charmbracelet/bubbletea v0.26.2 // indirect
+	github.com/charmbracelet/lipgloss v0.10.0 // indirect
 	github.com/erikgeiser/coninput v0.0.0-20211004153227-1c3628e74d0f // indirect
 	github.com/faiface/beep v1.1.0 // indirect
 	github.com/hajimehoshi/go-mp3 v0.3.4 // indirect

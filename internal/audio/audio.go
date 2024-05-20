@@ -1,135 +1,135 @@
 package audio
 
 import (
-	"bytes"
-	"fmt"
-	"io"
-	"sync"
-	"time"
+    "bytes"
+    "fmt"
+    "io"
+    "sync"
+    "time"
 
-	"github.com/faiface/beep"
-	"github.com/faiface/beep/speaker"
-	"github.com/faiface/beep/wav"
+    "github.com/faiface/beep"
+    "github.com/faiface/beep/speaker"
+    "github.com/faiface/beep/wav"
 )
 
 type AudioPlayer struct {
-	audioQueue [][]byte
-	mutex      sync.Mutex
-	ctrl       *beep.Ctrl
-	done       chan struct{}
-	format     beep.Format
-	isPlaying  bool
+    audioQueue       [][]byte
+    mutex            sync.Mutex
+    audioController  *beep.Ctrl
+    doneChannel      chan struct{}
+    audioFormat      beep.Format
+    isAudioPlaying   bool
 }
 
 func NewAudioPlayer() *AudioPlayer {
-	return &AudioPlayer{
-		audioQueue: make([][]byte, 0),
-		done:       make(chan struct{}),
-	}
+    return &AudioPlayer{
+        audioQueue: make([][]byte, 0),
+        doneChannel: make(chan struct{}),
+    }
 }
 
 func (ap *AudioPlayer) Play(audioData []byte) {
-	ap.mutex.Lock()
-	defer ap.mutex.Unlock()
+    ap.mutex.Lock()
+    defer ap.mutex.Unlock()
 
-	ap.audioQueue = append(ap.audioQueue, audioData)
+    ap.audioQueue = append(ap.audioQueue, audioData)
 
-	if !ap.isPlaying {
-		ap.isPlaying = true
-		go ap.playNext()
-	}
+    if !ap.isAudioPlaying {
+        ap.isAudioPlaying = true
+        go ap.playNextAudioChunk()
+    }
 }
 
-func (ap *AudioPlayer) playNext() {
-	ap.mutex.Lock()
-	defer ap.mutex.Unlock()
+func (ap *AudioPlayer) playNextAudioChunk() {
+    ap.mutex.Lock()
+    defer ap.mutex.Unlock()
 
-	if len(ap.audioQueue) == 0 {
-		ap.isPlaying = false
-		return
-	}
+    if len(ap.audioQueue) == 0 {
+        ap.isAudioPlaying = false
+        return
+    }
 
-	audioData := ap.audioQueue[0]
-	ap.audioQueue = ap.audioQueue[1:]
+    audioData := ap.audioQueue[0]
+    ap.audioQueue = ap.audioQueue[1:]
 
-	audioReader := bytes.NewReader(audioData)
-	audioReadCloser := io.NopCloser(audioReader)
+    audioReader := bytes.NewReader(audioData)
+    audioReadCloser := io.NopCloser(audioReader)
 
-	audioStreamer, format, err := wav.Decode(audioReadCloser)
-	if err != nil {
-		fmt.Printf("Failed to decode WAV data: %v\n", err)
-		ap.playNextIfAvailable()
-		return
-	}
-	defer audioStreamer.Close()
+    audioStreamer, format, err := wav.Decode(audioReadCloser)
+    if err != nil {
+        fmt.Printf("Failed to decode WAV data: %v\n", err)
+        ap.playNextAudioChunkIfAvailable()
+        return
+    }
+    defer audioStreamer.Close()
 
-	if ap.format == (beep.Format{}) {
-		ap.format = format
-		err = speaker.Init(ap.format.SampleRate, ap.format.SampleRate.N(time.Second/10))
-		if err != nil {
-			fmt.Printf("Failed to initialize speaker: %v\n", err)
-			ap.playNextIfAvailable()
-			return
-		}
-	}
+    if ap.audioFormat == (beep.Format{}) {
+        ap.audioFormat = format
+        err = speaker.Init(ap.audioFormat.SampleRate, ap.audioFormat.SampleRate.N(time.Second/10))
+        if err != nil {
+            fmt.Printf("Failed to initialize speaker: %v\n", err)
+            ap.playNextAudioChunkIfAvailable()
+            return
+        }
+    }
 
-	ap.ctrl = &beep.Ctrl{Streamer: audioStreamer, Paused: false}
+    ap.audioController = &beep.Ctrl{Streamer: audioStreamer, Paused: false}
 
-	var wg sync.WaitGroup
-	wg.Add(1)
-	speaker.Play(beep.Seq(ap.ctrl, beep.Callback(func() {
-		wg.Done()
-	})))
+    var waitGroup sync.WaitGroup
+    waitGroup.Add(1)
+    speaker.Play(beep.Seq(ap.audioController, beep.Callback(func() {
+        waitGroup.Done()
+    })))
 
-	go func() {
-		wg.Wait()
-		ap.playNextIfAvailable()
-	}()
+    go func() {
+        waitGroup.Wait()
+        ap.playNextAudioChunkIfAvailable()
+    }()
 }
 
-func (ap *AudioPlayer) playNextIfAvailable() {
-	ap.mutex.Lock()
-	defer ap.mutex.Unlock()
+func (ap *AudioPlayer) playNextAudioChunkIfAvailable() {
+    ap.mutex.Lock()
+    defer ap.mutex.Unlock()
 
-	if len(ap.audioQueue) > 0 {
-		ap.isPlaying = true
-		go ap.playNext()
-	} else {
-		ap.isPlaying = false
-	}
+    if len(ap.audioQueue) > 0 {
+        ap.isAudioPlaying = true
+        go ap.playNextAudioChunk()
+    } else {
+        ap.isAudioPlaying = false
+    }
 }
 
 func (ap *AudioPlayer) Pause() {
-	ap.mutex.Lock()
-	defer ap.mutex.Unlock()
+    ap.mutex.Lock()
+    defer ap.mutex.Unlock()
 
-	if ap.ctrl != nil {
-		ap.ctrl.Paused = true
-	}
+    if ap.audioController != nil {
+        ap.audioController.Paused = true
+    }
 }
 
 func (ap *AudioPlayer) Resume() {
-	ap.mutex.Lock()
-	defer ap.mutex.Unlock()
+    ap.mutex.Lock()
+    defer ap.mutex.Unlock()
 
-	if ap.ctrl != nil {
-		ap.ctrl.Paused = false
-	}
+    if ap.audioController != nil {
+        ap.audioController.Paused = false
+    }
 }
 
 func (ap *AudioPlayer) Stop() {
-	speaker.Lock()
-	defer speaker.Unlock()
+    speaker.Lock()
+    defer speaker.Unlock()
 
-	ap.mutex.Lock()
-	defer ap.mutex.Unlock()
+    ap.mutex.Lock()
+    defer ap.mutex.Unlock()
 
-	if ap.ctrl != nil {
-		if closer, ok := ap.ctrl.Streamer.(io.Closer); ok {
-			closer.Close()
-		}
-		ap.done <- struct{}{}
-		ap.isPlaying = false
-		ap.audioQueue = nil
-	}
+    if ap.audioController != nil {
+        if closer, ok := ap.audioController.Streamer.(io.Closer); ok {
+            closer.Close()
+        }
+        ap.doneChannel <- struct{}{}
+        ap.isAudioPlaying = false
+        ap.audioQueue = nil
+    }
 }
