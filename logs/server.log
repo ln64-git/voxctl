@@ -1,0 +1,5 @@
+2024/05/21 19:22:43 server.go:37: Received POST request to /play
+2024/05/21 19:22:44 server.go:56: Speech synthesized and added to the queue
+2024/05/21 19:26:44 server.go:34: Starting server on port 8080
+2024/05/21 19:26:46 server.go:47: Received POST request to /play with text: something
+2024/05/21 19:26:47 server.go:58: Speech synthesized and added to the queue

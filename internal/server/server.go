@@ -3,12 +3,16 @@ package server
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
+	"os"
 	"strconv"
 
 	"github.com/ln64-git/voxctl/external/azure"
 	"github.com/ln64-git/voxctl/internal/types"
 )
+
+var logger *log.Logger
 
 type PlayRequest struct {
 	Text      string `json:"text"`
@@ -21,34 +25,46 @@ func (r PlayRequest) ToJSON() string {
 }
 
 func StartServer(port int, azureSubscriptionKey, azureRegion string, state *types.State) {
+	err := initLogger()
+	if err != nil {
+		state.SetStatus(fmt.Sprintf("Failed to initialize logger: %v", err))
+		return
+	}
+
+	logger.Printf("Starting server on port %d", port)
+
 	go func() {
 		http.HandleFunc("/play", func(w http.ResponseWriter, r *http.Request) {
-			if r.Method != http.MethodPost {
-				http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-				return
-			}
-
 			var req PlayRequest
 			err := json.NewDecoder(r.Body).Decode(&req)
 			if err != nil {
 				http.Error(w, "Bad request", http.StatusBadRequest)
+				logger.Printf("Failed to decode request body: %v", err)
 				return
 			}
+
+			// Log the request
+			logger.Printf("Received POST request to /play with text: %s", req.Text)
 
 			err = parseAndPlay(req, azureSubscriptionKey, azureRegion, state)
 			if err != nil {
 				http.Error(w, fmt.Sprintf("Failed to play audio: %v", err), http.StatusInternalServerError)
+				logger.Printf("Failed to play audio: %v", err)
 				return
 			}
 
 			w.WriteHeader(http.StatusOK)
 			fmt.Fprint(w, "Speech synthesized and added to the queue")
+			logger.Printf("Speech synthesized and added to the queue")
 		})
+
 		addr := ":" + strconv.Itoa(port)
 		err := http.ListenAndServe(addr, nil)
 		if err != nil {
 			state.SetStatus(fmt.Sprintf("Failed to start server: %v", err))
+			logger.Printf("Failed to start server: %v", err)
 		}
+
 		state.SetStatus("Ready")
 	}()
 }
@@ -56,6 +72,7 @@ func StartServer(port int, azureSubscriptionKey, azureRegion string, state *type
 func parseAndPlay(req PlayRequest, azureSubscriptionKey, azureRegion string, state *types.State) error {
 	var sentences []string
 	var currentSentence string
+
 	for i, char := range req.Text {
 		if char == ',' {
 			sentences = append(sentences, currentSentence)
@@ -71,19 +88,40 @@ func parseAndPlay(req PlayRequest, azureSubscriptionKey, azureRegion string, sta
 	for _, sentence := range sentences {
 		audioData, err := azure.SynthesizeSpeech(azureSubscriptionKey, azureRegion, sentence, req.Gender, req.VoiceName)
 		if err != nil {
+			logger.Printf("Failed to synthesize speech for sentence '%s': %v", sentence, err)
 			return fmt.Errorf("failed to synthesize speech for sentence '%s': %v", sentence, err)
 		}
 
 		if len(audioData) == 0 {
+			logger.Printf("Empty audio data received from Azure for sentence '%s'", sentence)
 			return fmt.Errorf("empty audio data received from Azure for sentence '%s'", sentence)
 		}
 
 		if state.AudioPlayer != nil {
 			state.AudioPlayer.Play(audioData)
 		} else {
+			logger.Print("AudioPlayer not initialized")
 			return fmt.Errorf("AudioPlayer not initialized")
 		}
 	}
 
+	return nil
+}
+
+func initLogger() error {
+	// Create the logs directory if it doesn't exist
+	err := os.MkdirAll("logs", 0755)
+	if err != nil {
+		return err
+	}
+
+	// Open the log file
+	logFile, err := os.OpenFile("logs/server.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return err
+	}
+
+	// Create the logger
+	logger = log.New(logFile, "", log.LstdFlags|log.Lshortfile)
 	return nil
 }
