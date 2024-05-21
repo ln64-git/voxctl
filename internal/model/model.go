@@ -18,9 +18,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if m.userRequest {
 		if m.userInput != "" {
 			m.sendPlayRequest()
-			// m.userInput = ""
-			// m.userRequest = false
-			return m, tea.Quit
+			if m.userQuit {
+				return m, tea.Quit
+			}
 		}
 	}
 	switch msg := msg.(type) {

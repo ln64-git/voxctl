@@ -19,6 +19,7 @@ type PlayRequest struct {
 func (r PlayRequest) ToJSON() string {
 	return fmt.Sprintf(`{"text":"%s","gender":"%s","voiceName":"%s"}`, r.Text, r.Gender, r.VoiceName)
 }
+
 func StartServer(port int, azureSubscriptionKey, azureRegion string, state *types.State) {
 	go func() {
 		http.HandleFunc("/play", func(w http.ResponseWriter, r *http.Request) {
