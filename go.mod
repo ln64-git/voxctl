@@ -9,6 +9,7 @@ require (
 	github.com/charmbracelet/lipgloss v0.10.0 // indirect
 	github.com/erikgeiser/coninput v0.0.0-20211004153227-1c3628e74d0f // indirect
 	github.com/faiface/beep v1.1.0 // indirect
+	github.com/godbus/dbus/v5 v5.1.0 // indirect
 	github.com/hajimehoshi/go-mp3 v0.3.4 // indirect
 	github.com/hajimehoshi/oto v1.0.1 // indirect
 	github.com/joho/godotenv v1.5.1 // indirect

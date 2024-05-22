@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/ln64-git/voxctl/external/azure"
 	"github.com/ln64-git/voxctl/internal/types"
@@ -42,6 +43,9 @@ func StartServer(port int, azureSubscriptionKey, azureRegion string, state *type
 				logger.Printf("Failed to decode request body: %v", err)
 				return
 			}
+
+			// Trim leading and trailing whitespace from the text
+			req.Text = strings.TrimSpace(req.Text)
 
 			// Log the request
 			logger.Printf("Received POST request to /play with text: %s", req.Text)

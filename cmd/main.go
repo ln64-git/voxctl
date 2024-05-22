@@ -19,9 +19,10 @@ func main() {
 
 	initialModel := model.InitialModel(*input, *port, *quit)
 	p := tea.NewProgram(initialModel)
-
+	
 	if _, err := p.Run(); err != nil {
 		fmt.Println("Error running program:", err)
 		os.Exit(1)
 	}
+
 }
