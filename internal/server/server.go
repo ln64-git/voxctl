@@ -74,6 +74,30 @@ func StartServer(port int, azureSubscriptionKey, azureRegion string, state *type
 			logger.Printf("Speech synthesized and added to the queue")
 		})
 
+		http.HandleFunc("/pause", func(w http.ResponseWriter, r *http.Request) {
+			if state.AudioPlayer != nil {
+				state.AudioPlayer.Pause()
+				w.WriteHeader(http.StatusOK)
+				fmt.Fprint(w, "Audio playback paused")
+				logger.Print("Audio playback paused")
+			} else {
+				http.Error(w, "AudioPlayer not initialized", http.StatusInternalServerError)
+				logger.Print("AudioPlayer not initialized")
+			}
+		})
+
+		http.HandleFunc("/stop", func(w http.ResponseWriter, r *http.Request) {
+			if state.AudioPlayer != nil {
+				state.AudioPlayer.Stop()
+				w.WriteHeader(http.StatusOK)
+				fmt.Fprint(w, "Audio playback stopped")
+				logger.Print("Audio playback stopped")
+			} else {
+				http.Error(w, "AudioPlayer not initialized", http.StatusInternalServerError)
+				logger.Print("AudioPlayer not initialized")
+			}
+		})
+
 		addr := ":" + strconv.Itoa(port)
 		err := http.ListenAndServe(addr, nil)
 		if err != nil {
@@ -142,4 +166,3 @@ func initLogger() error {
 	logger = log.New(logFile, "", log.LstdFlags|log.Lshortfile)
 	return nil
 }
-
