@@ -18,23 +18,39 @@ type AudioPlayer struct {
 	audioController *beep.Ctrl
 	audioFormat     beep.Format
 	isAudioPlaying  bool
+	MPRISController *MPRISController
 }
 
 func NewAudioPlayer() *AudioPlayer {
-	return &AudioPlayer{
+	ap := &AudioPlayer{
 		audioQueue: make([][]byte, 0),
 	}
+
+	mprisController := NewMPRISController(ap)
+	if mprisController == nil {
+		fmt.Println("Failed to initialize MPRIS controller")
+		return nil
+	}
+	ap.MPRISController = mprisController
+
+	return ap
 }
 
-func (ap *AudioPlayer) Play(audioData []byte) {
+func (ap *AudioPlayer) Play() {
 	ap.mutex.Lock()
 	defer ap.mutex.Unlock()
 
-	ap.audioQueue = append(ap.audioQueue, audioData)
-	if !ap.isAudioPlaying {
-		ap.isAudioPlaying = true
-		go ap.playNextAudioChunk()
+	if len(ap.audioQueue) == 0 && !ap.isAudioPlaying {
+		return
 	}
+
+	if ap.isAudioPlaying {
+		ap.audioController.Paused = false
+		return
+	}
+
+	ap.isAudioPlaying = true
+	go ap.playNextAudioChunk()
 }
 
 func (ap *AudioPlayer) playNextAudioChunk() {
@@ -90,15 +106,6 @@ func (ap *AudioPlayer) Pause() {
 	}
 }
 
-func (ap *AudioPlayer) Resume() {
-	ap.mutex.Lock()
-	defer ap.mutex.Unlock()
-
-	if ap.audioController != nil {
-		ap.audioController.Paused = false
-	}
-}
-
 func (ap *AudioPlayer) Stop() {
 	speaker.Lock()
 	defer speaker.Unlock()
@@ -112,5 +119,16 @@ func (ap *AudioPlayer) Stop() {
 		}
 		ap.isAudioPlaying = false
 		ap.audioQueue = nil
+	}
+}
+
+func (ap *AudioPlayer) AddToQueue(audioData []byte) {
+	ap.mutex.Lock()
+	defer ap.mutex.Unlock()
+
+	ap.audioQueue = append(ap.audioQueue, audioData)
+	if !ap.isAudioPlaying {
+		ap.isAudioPlaying = true
+		go ap.playNextAudioChunk()
 	}
 }

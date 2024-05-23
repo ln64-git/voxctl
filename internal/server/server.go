@@ -114,7 +114,8 @@ func parseAndPlay(req PlayRequest, azureSubscriptionKey, azureRegion string, sta
 		}
 
 		if state.AudioPlayer != nil {
-			state.AudioPlayer.Play(audioData)
+			state.AudioPlayer.AddToQueue(audioData)
+			state.AudioPlayer.Play()
 		} else {
 			logger.Print("AudioPlayer not initialized")
 			return fmt.Errorf("AudioPlayer not initialized")
@@ -141,3 +142,4 @@ func initLogger() error {
 	logger = log.New(logFile, "", log.LstdFlags|log.Lshortfile)
 	return nil
 }
+

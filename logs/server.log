@@ -1,0 +1,49 @@
+2024/05/23 02:14:46 server.go:36: Starting server on port 8080
+2024/05/23 02:14:46 server.go:81: Failed to start server: listen tcp :8080: bind: address already in use
+2024/05/23 02:14:59 server.go:36: Starting server on port 8080
+2024/05/23 02:14:59 server.go:81: Failed to start server: listen tcp :8080: bind: address already in use
+2024/05/23 02:14:59 server.go:63: Received POST request to /play with text: To resolve the issue of type incompatibility when assigning player from dbus.BusObject to *dbus.Object in your AudioPlayer struct, you need to perform a type assertion to convert dbus.BusObject to *dbus.Object. Here's how you can adjust your code:
+2024/05/23 02:15:01 server.go:74: Speech synthesized and added to the queue
+2024/05/23 02:21:25 server.go:55: Failed to decode request body: invalid character 'r' after object key:value pair
+2024/05/23 02:41:14 server.go:36: Starting server on port 8080
+2024/05/23 02:41:14 server.go:81: Failed to start server: listen tcp :8080: bind: address already in use
+2024/05/23 02:41:18 server.go:36: Starting server on port 8080
+2024/05/23 02:41:18 server.go:81: Failed to start server: listen tcp :8080: bind: address already in use
+2024/05/23 02:41:18 server.go:55: Failed to decode request body: invalid character 'h' after object key:value pair
+2024/05/23 03:54:43 server.go:36: Starting server on port 8080
+2024/05/23 03:54:43 server.go:81: Failed to start server: listen tcp :8080: bind: address already in use
+2024/05/23 03:54:46 server.go:36: Starting server on port 8080
+2024/05/23 03:54:46 server.go:81: Failed to start server: listen tcp :8080: bind: address already in use
+2024/05/23 03:54:46 server.go:55: Failed to decode request body: invalid character 'b' after object key:value pair
+2024/05/23 03:55:04 server.go:36: Starting server on port 8080
+2024/05/23 03:55:04 server.go:81: Failed to start server: listen tcp :8080: bind: address already in use
+2024/05/23 03:55:04 server.go:63: Received POST request to /play with text: When no battery is detected (typically a desktop computer), the battery widget and the utility widget will not be displayed. Instead, a weather widget will appear in this position.
+2024/05/23 03:55:05 server.go:74: Speech synthesized and added to the queue
+2024/05/23 04:05:18 server.go:36: Starting server on port 8080
+2024/05/23 04:05:18 server.go:81: Failed to start server: listen tcp :8080: bind: address already in use
+2024/05/23 04:05:27 server.go:36: Starting server on port 8080
+2024/05/23 04:05:27 server.go:81: Failed to start server: listen tcp :8080: bind: address already in use
+2024/05/23 04:05:27 server.go:63: Received POST request to /play with text: Here is the updated code focusing on integrating MPRIS D-Bus controls:
+2024/05/23 04:05:28 server.go:74: Speech synthesized and added to the queue
+2024/05/23 04:15:22 server.go:36: Starting server on port 8080
+2024/05/23 04:15:22 server.go:81: Failed to start server: listen tcp :8080: bind: address already in use
+2024/05/23 04:15:29 server.go:36: Starting server on port 8080
+2024/05/23 04:15:29 server.go:81: Failed to start server: listen tcp :8080: bind: address already in use
+2024/05/23 04:15:29 server.go:63: Received POST request to /play with text: These changes ensure that the Play method in AudioPlayer matches the expectations in the server code and properly handles the audio playback queue.
+2024/05/23 04:15:30 server.go:74: Speech synthesized and added to the queue
+2024/05/23 04:15:49 server.go:36: Starting server on port 8080
+2024/05/23 04:15:49 server.go:81: Failed to start server: listen tcp :8080: bind: address already in use
+2024/05/23 04:16:24 server.go:36: Starting server on port 8080
+2024/05/23 04:16:24 server.go:81: Failed to start server: listen tcp :8080: bind: address already in use
+2024/05/23 04:16:24 server.go:63: Received POST request to /play with text: These changes ensure that the Play method in AudioPlayer matches the expectations in the server code and properly handles the audio playback queue.
+2024/05/23 04:16:25 server.go:74: Speech synthesized and added to the queue
+2024/05/23 04:16:26 server.go:63: Received POST request to /play with text: These changes ensure that the Play method in AudioPlayer matches the expectations in the server code and properly handles the audio playback queue.
+2024/05/23 04:16:27 server.go:74: Speech synthesized and added to the queue
+2024/05/23 04:17:02 server.go:63: Received POST request to /play with text: These changes ensure that the Play method in AudioPlayer matches the expectations in the server code and properly handles the audio playback queue.
+2024/05/23 04:17:03 server.go:74: Speech synthesized and added to the queue
+2024/05/23 04:17:12 server.go:36: Starting server on port 8080
+2024/05/23 04:17:12 server.go:81: Failed to start server: listen tcp :8080: bind: address already in use
+2024/05/23 04:17:12 server.go:63: Received POST request to /play with text: These changes ensure that the Play method in AudioPlayer matches the expectations in the server code and properly handles the audio playback queue.
+2024/05/23 04:17:13 server.go:74: Speech synthesized and added to the queue
+2024/05/23 04:17:22 server.go:63: Received POST request to /play with text: These changes ensure that the Play method in AudioPlayer matches the expectations in the server code and properly handles the audio playback queue.
+2024/05/23 04:17:23 server.go:74: Speech synthesized and added to the queue
