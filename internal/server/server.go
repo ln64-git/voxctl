@@ -3,6 +3,7 @@ package server
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -37,9 +38,20 @@ func StartServer(port int, azureSubscriptionKey, azureRegion string, state *type
 	go func() {
 		http.HandleFunc("/play", func(w http.ResponseWriter, r *http.Request) {
 			var req PlayRequest
-			err := json.NewDecoder(r.Body).Decode(&req)
+			bodyBytes, err := io.ReadAll(r.Body)
 			if err != nil {
-				http.Error(w, "Bad request", http.StatusBadRequest)
+				http.Error(w, "Failed to read request body", http.StatusBadRequest)
+				logger.Printf("Failed to read request body: %v", err)
+				return
+			}
+
+			// Remove all extra characters
+			bodyString := strings.ReplaceAll(string(bodyBytes), "\n", "")
+			bodyString = strings.ReplaceAll(bodyString, "\t", "")
+
+			err = json.Unmarshal([]byte(bodyString), &req)
+			if err != nil {
+				http.Error(w, "Bad request: "+err.Error(), http.StatusBadRequest)
 				logger.Printf("Failed to decode request body: %v", err)
 				return
 			}
