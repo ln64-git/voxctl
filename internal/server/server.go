@@ -12,19 +12,11 @@ import (
 
 	"github.com/ln64-git/sandbox/internal/log"
 	"github.com/ln64-git/sandbox/internal/speech"
+	"github.com/ln64-git/sandbox/internal/types"
 )
 
-type PlayRequest struct {
-	Text      string `json:"text"`
-	Gender    string `json:"gender"`
-	VoiceName string `json:"voiceName"`
-}
-
-func (r PlayRequest) ToJSON() string {
-	return fmt.Sprintf(`{"text":"%s","gender":"%s","voiceName":"%s"}`, r.Text, r.Gender, r.VoiceName)
-}
-
-func StartServer(port int, azureSubscriptionKey, azureRegion string) {
+func StartServer(state types.AppState) {
+	port := state.Port
 	log.Logger.Printf("Starting server on port %d", port)
 
 	http.HandleFunc("/status", func(w http.ResponseWriter, r *http.Request) {
@@ -47,7 +39,14 @@ func StartServer(port int, azureSubscriptionKey, azureRegion string) {
 		// Log the request
 		log.Logger.Printf("Received POST request to /play with text: %s", req.Text)
 
-		err := speech.ParseAndPlay(req, azureSubscriptionKey, azureRegion)
+		playReq := speech.PlayRequest{
+			Text:      req.Text,
+			Gender:    req.Gender,
+			VoiceName: req.VoiceName,
+		}
+
+		// Pass the AudioPlayer as a pointer
+		err := speech.ParseAndPlay(playReq, state.AzureSubscriptionKey, state.AzureRegion, state.AudioPlayer)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("Failed to play audio: %v", err), http.StatusInternalServerError)
 			log.Logger.Printf("Failed to play audio: %v", err)
@@ -60,15 +59,23 @@ func StartServer(port int, azureSubscriptionKey, azureRegion string) {
 	})
 
 	http.HandleFunc("/pause", func(w http.ResponseWriter, r *http.Request) {
-		// Handle pause request
-		w.WriteHeader(http.StatusOK)
-		fmt.Fprint(w, "Audio paused")
+		if state.AudioPlayer != nil {
+			state.AudioPlayer.Pause()
+			w.WriteHeader(http.StatusOK)
+			fmt.Fprint(w, "Audio paused")
+		} else {
+			http.Error(w, "AudioPlayer not initialized", http.StatusInternalServerError)
+		}
 	})
 
 	http.HandleFunc("/stop", func(w http.ResponseWriter, r *http.Request) {
-		// Handle stop request
-		w.WriteHeader(http.StatusOK)
-		fmt.Fprint(w, "Audio stopped")
+		if state.AudioPlayer != nil {
+			state.AudioPlayer.Stop()
+			w.WriteHeader(http.StatusOK)
+			fmt.Fprint(w, "Audio stopped")
+		} else {
+			http.Error(w, "AudioPlayer not initialized", http.StatusInternalServerError)
+		}
 	})
 
 	addr := ":" + strconv.Itoa(port)
@@ -116,7 +123,7 @@ func parseJSONRequest(r *http.Request, v interface{}) error {
 	}
 
 	// Trim leading and trailing whitespace from text fields
-	if pr, ok := v.(*PlayRequest); ok {
+	if pr, ok := v.(*speech.PlayRequest); ok {
 		pr.Text = strings.TrimSpace(pr.Text)
 	}
 

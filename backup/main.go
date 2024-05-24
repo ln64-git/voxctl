@@ -16,6 +16,12 @@ func main() {
 	defer log.Logger.Writer()
 	log.Logger.Println("main - Program Started")
 
+	// input := flag.String("play", "", "Input text to play")
+	// port := flag.Int("port", 8080, "Port number to connect or serve")
+	// quit := flag.Bool("quit", false, "Exit application after request")
+	// pause := flag.Bool("pause", false, "Pause audio playback")
+	// stop := flag.Bool("stop", false, "Stop audio playback")
+
 	// Wait for the audio to finish playing
 	// audioPlayer.WaitForCompletion()
 

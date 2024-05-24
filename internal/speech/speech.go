@@ -1,11 +1,10 @@
-// internal/speech/speech.go
-
 package speech
 
 import (
 	"fmt"
 
 	"github.com/ln64-git/sandbox/external/azure"
+	"github.com/ln64-git/sandbox/internal/audio"
 	"github.com/ln64-git/sandbox/internal/log"
 )
 
@@ -19,7 +18,7 @@ func (r PlayRequest) ToJSON() string {
 	return fmt.Sprintf(`{"text":"%s","gender":"%s","voiceName":"%s"}`, r.Text, r.Gender, r.VoiceName)
 }
 
-func ParseAndPlay(req PlayRequest, azureSubscriptionKey, azureRegion string) error {
+func ParseAndPlay(req PlayRequest, azureSubscriptionKey, azureRegion string, audioPlayer *audio.AudioPlayer) error {
 	var sentences []string
 	var currentSentence string
 
@@ -38,16 +37,11 @@ func ParseAndPlay(req PlayRequest, azureSubscriptionKey, azureRegion string) err
 	for _, sentence := range sentences {
 		audioData, err := azure.SynthesizeSpeech(azureSubscriptionKey, azureRegion, sentence, req.Gender, req.VoiceName)
 		if err != nil {
-			log.Logger.Printf("Failed to synthesize speech for sentence '%s': %v", sentence, err)
-			return fmt.Errorf("failed to synthesize speech for sentence '%s': %v", sentence, err)
+			log.Logger.Printf("Failed to synthesize speech: %v", err)
+			return err
 		}
-
-		if len(audioData) == 0 {
-			log.Logger.Printf("Empty audio data received from Azure for sentence '%s'", sentence)
-			return fmt.Errorf("empty audio data received from Azure for sentence '%s'", sentence)
-		}
+		audioPlayer.Play(audioData)
 	}
 
 	return nil
 }
-
