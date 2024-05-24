@@ -64,7 +64,7 @@ func main() {
 
 	if !serverAlreadyRunning {
 		state.AudioPlayer = audio.NewAudioPlayer()
-		go server.StartServer(state) // Start server with AudioPlayer
+		go server.StartServer(state)
 	} else {
 		log.Logger.Printf("Server is already running on port %d. Connecting to the existing server...\n", state.Port)
 		server.ConnectToServer(state.Port)
@@ -74,7 +74,7 @@ func main() {
 	processRequest(state)
 	if state.QuitRequested {
 		log.Logger.Println("Quit flag requested, Program Exiting")
-		return // Exit program
+		return // Exit program if QuitRequested
 	}
 
 	// Block main from exiting
@@ -107,13 +107,13 @@ func processRequest(state types.AppState) {
 			VoiceName: state.VoiceName,
 		}
 		body := bytes.NewBufferString(playReq.ToJSON())
-		resp, err := client.Post(fmt.Sprintf("http://localhost:%d/play", state.Port), "application/json", body)
+		resp, err := client.Post(fmt.Sprintf("http://localhost:%d/input", state.Port), "application/json", body)
 		if err != nil {
-			log.Logger.Printf("Failed to send play request: %v\n", err)
+			log.Logger.Printf("Failed to send input request: %v\n", err)
 			return
 		}
 		defer resp.Body.Close()
-		log.Logger.Printf("Play response: %s\n", resp.Status)
+		log.Logger.Printf("Input response: %s\n", resp.Status)
 	}
 
 	if state.PauseRequested {
