@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/ln64-git/voxctl/internal/input"
+	"github.com/ln64-git/voxctl/external/azure"
 	"github.com/ln64-git/voxctl/internal/log"
 	"github.com/ln64-git/voxctl/internal/speech"
 	"github.com/ln64-git/voxctl/internal/types"
@@ -36,7 +36,6 @@ func StartServer(state types.AppState) {
 			return
 		}
 
-		// Pass the AudioPlayer as a pointer
 		err = speech.ProcessSpeech(*inputReq, state.AzureSubscriptionKey, state.AzureRegion, state.AudioPlayer)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("Failed to play audio: %v", err), http.StatusInternalServerError)
@@ -49,23 +48,41 @@ func StartServer(state types.AppState) {
 	})
 
 	http.HandleFunc("/token", func(w http.ResponseWriter, r *http.Request) {
-
-		// new function to parse token responses and stich them into sentences 
-		// then when a sentence is formed then it is sent to processSpeechRequest 
-
-		TokenReq, err := processSpeechRequest(r)
+		tokenReq, err := processSpeechRequest(r)
 		if err != nil {
 			http.Error(w, "Bad request", http.StatusBadRequest)
 			log.Logger.Printf("%v", err)
 			return
 		}
 
-		// Pass the AudioPlayer as a pointer
-		err = speech.ProcessSpeech(*TokenReq, state.AzureSubscriptionKey, state.AzureRegion, state.AudioPlayer)
-		if err != nil {
-			http.Error(w, fmt.Sprintf("Failed to process token: %v", err), http.StatusInternalServerError)
-			log.Logger.Printf("Failed to process token: %v", err)
-			return
+		log.Logger.Printf("Received token request: %v", tokenReq.Text)
+
+		var sentences []string
+		var currentSentence string
+		for i, char := range tokenReq.Text {
+			if char == ',' || char == '.' || char == '!' || char == '?' {
+				sentences = append(sentences, currentSentence)
+				currentSentence = ""
+				log.Logger.Printf("Parsed sentence: %s", sentences[len(sentences)-1])
+			} else {
+				currentSentence += string(char)
+				if i == len(tokenReq.Text)-1 {
+					sentences = append(sentences, currentSentence)
+					log.Logger.Printf("Parsed sentence: %s", currentSentence)
+				}
+			}
+		}
+
+		for _, sentence := range sentences {
+			log.Logger.Printf("Synthesizing sentence: %s", sentence)
+			audioData, err := azure.SynthesizeSpeech(state.AzureSubscriptionKey, state.AzureRegion, sentence, tokenReq.Gender, tokenReq.VoiceName)
+			if err != nil {
+				http.Error(w, fmt.Sprintf("Failed to synthesize speech: %v", err), http.StatusInternalServerError)
+				log.Logger.Printf("Failed to synthesize speech: %v", err)
+				return
+			}
+			log.Logger.Printf("Playing synthesized audio for sentence: %s", sentence)
+			state.AudioPlayer.Play(audioData)
 		}
 
 		w.WriteHeader(http.StatusOK)
@@ -122,35 +139,16 @@ func ConnectToServer(port int) {
 
 func processSpeechRequest(r *http.Request) (*speech.SpeechRequest, error) {
 	var req speech.SpeechRequest
-
-	// this should just take in string not http.Request, 
-	// body should be parsed in parent function
-	// I want this to work with /input and /token
-
-	// Read the request body
 	bodyBytes, err := io.ReadAll(r.Body)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read request body: %v", err)
 	}
 	defer r.Body.Close()
 
-	// Unmarshal the request body into the PlayRequest struct
 	err = json.Unmarshal(bodyBytes, &req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode request body: %v", err)
 	}
 
-	// Parse the text from the request body
-	text, err := input.SanitizeInput(string(bodyBytes))
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse text from request: %v", err)
-	}
-
-	playReq := speech.SpeechRequest{
-		Text:      text,
-		Gender:    req.Gender,
-		VoiceName: req.VoiceName,
-	}
-
-	return &playReq, nil
+	return &req, nil
 }

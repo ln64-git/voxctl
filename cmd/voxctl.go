@@ -21,7 +21,6 @@ import (
 )
 
 func main() {
-	// Initialize logger
 	err := log.InitLogger()
 	if err != nil {
 		fmt.Printf("Failed to initialize logger: %v\n", err)
@@ -30,7 +29,6 @@ func main() {
 	defer log.Logger.Writer()
 	log.Logger.Println("main - Program Started")
 
-	// Initialize flag arguments
 	flagPort := flag.Int("port", 8080, "Port number to connect or serve")
 	flagToken := flag.String("token", "", "Process input stream token")
 	flagInput := flag.String("input", "", "Input text to play")
@@ -40,17 +38,14 @@ func main() {
 	flagStop := flag.Bool("stop", false, "Stop audio playback")
 	flag.Parse()
 
-	// Initialize user configuration
 	cfg, err := config.GetConfig()
 	if err != nil {
 		log.Logger.Printf("Failed to get configuration: %v\n", err)
 		return
 	}
 
-	// Check if server is already running
 	serverAlreadyRunning := server.CheckServerRunning(*flagPort)
 
-	// Create state struct
 	state := types.AppState{
 		Port:                 *flagPort,
 		Token:                *flagToken,
@@ -66,7 +61,6 @@ func main() {
 		ServerAlreadyRunning: serverAlreadyRunning,
 	}
 
-	// Launch Server if not already running on Port
 	if !serverAlreadyRunning {
 		state.AudioPlayer = audio.NewAudioPlayer()
 		go server.StartServer(state)
@@ -75,14 +69,12 @@ func main() {
 		server.ConnectToServer(state.Port)
 	}
 
-	// Process flags for requests
 	processRequest(state)
 	if state.QuitRequested {
 		log.Logger.Println("Quit flag requested, Program Exiting")
-		return // Exit program if QuitRequested
+		return
 	}
 
-	// Block main from exiting
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
@@ -141,8 +133,7 @@ func processRequest(state types.AppState) {
 		log.Logger.Printf("Stop response: %s\n", resp.Status)
 
 	case state.Token != "":
-		log.Logger.Println("Stream input detected.")
-		var audioData []byte
+		log.Logger.Println("Token input detected.")
 		pipeReader, pipeWriter := io.Pipe()
 		go func() {
 			defer pipeWriter.Close()
@@ -166,12 +157,24 @@ func processRequest(state types.AppState) {
 			}
 		}()
 
-		audioData, err := io.ReadAll(pipeReader)
+		tokenText, err := io.ReadAll(pipeReader)
 		if err != nil {
 			log.Logger.Printf("Failed to read piped input: %v\n", err)
 			return
 		}
 
-		state.AudioPlayer.Play(audioData)
+		tokenReq := speech.SpeechRequest{
+			Text:      string(tokenText),
+			Gender:    state.VoiceGender,
+			VoiceName: state.VoiceName,
+		}
+		body := bytes.NewBufferString(tokenReq.ToJSON())
+		resp, err := client.Post(fmt.Sprintf("http://localhost:%d/token", state.Port), "application/json", body)
+		if err != nil {
+			log.Logger.Printf("Failed to send token request: %v\n", err)
+			return
+		}
+		defer resp.Body.Close()
+		log.Logger.Printf("Token response: %s\n", resp.Status)
 	}
 }
