@@ -1,6 +1,6 @@
 # voxctl
 
-voxel is a terminal-based text-to-speech interface designed with modularity in mind. Once the server is running after inital launch, users can send provide input via command flag or API call. Sentences are parsed from user input sequentually for speedy response, audio clips are then queued respectively.
+voxel is a terminal-based text-to-speech interface designed with modularity in mind. Once the server is running after inital launch, users can send provide input via command flag or API call. Sentences are then parsed from user input sequentually for speedy response, audio clips are then queued respectively.
 
 ## Installation
 
