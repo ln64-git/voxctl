@@ -37,7 +37,7 @@ func StartServer(state types.AppState) {
 		}
 
 		// Pass the AudioPlayer as a pointer
-		err = speech.ParseAndPlay(*playReq, state.AzureSubscriptionKey, state.AzureRegion, state.AudioPlayer)
+		err = speech.ProcessSpeech(*playReq, state.AzureSubscriptionKey, state.AzureRegion, state.AudioPlayer)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("Failed to play audio: %v", err), http.StatusInternalServerError)
 			log.Logger.Printf("Failed to play audio: %v", err)

@@ -18,7 +18,7 @@ func (r PlayRequest) ToJSON() string {
 	return fmt.Sprintf(`{"text":"%s","gender":"%s","voiceName":"%s"}`, r.Text, r.Gender, r.VoiceName)
 }
 
-func ParseAndPlay(req PlayRequest, azureSubscriptionKey, azureRegion string, audioPlayer *audio.AudioPlayer) error {
+func ProcessSpeech(req PlayRequest, azureSubscriptionKey, azureRegion string, audioPlayer *audio.AudioPlayer) error {
 	var sentences []string
 	var currentSentence string
 
