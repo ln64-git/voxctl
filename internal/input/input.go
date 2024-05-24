@@ -8,7 +8,7 @@ import (
 )
 
 func SanitizeInput(requestBody string) (string, error) {
-	var req speech.PlayRequest
+	var req speech.SpeechRequest
 	err := json.Unmarshal([]byte(requestBody), &req)
 	if err != nil {
 		return "", err

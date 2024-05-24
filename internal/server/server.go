@@ -29,7 +29,7 @@ func StartServer(state types.AppState) {
 	})
 
 	http.HandleFunc("/input", func(w http.ResponseWriter, r *http.Request) {
-		playReq, err := processInputRequest(r)
+		inputReq, err := processSpeechRequest(r)
 		if err != nil {
 			http.Error(w, "Bad request", http.StatusBadRequest)
 			log.Logger.Printf("%v", err)
@@ -37,10 +37,34 @@ func StartServer(state types.AppState) {
 		}
 
 		// Pass the AudioPlayer as a pointer
-		err = speech.ProcessSpeech(*playReq, state.AzureSubscriptionKey, state.AzureRegion, state.AudioPlayer)
+		err = speech.ProcessSpeech(*inputReq, state.AzureSubscriptionKey, state.AzureRegion, state.AudioPlayer)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("Failed to play audio: %v", err), http.StatusInternalServerError)
 			log.Logger.Printf("Failed to play audio: %v", err)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+		log.Logger.Printf("Speech synthesized and added to the queue")
+	})
+
+	http.HandleFunc("/token", func(w http.ResponseWriter, r *http.Request) {
+
+		// new function to parse token responses and stich them into sentences 
+		// then when a sentence is formed then it is sent to processSpeechRequest 
+
+		TokenReq, err := processSpeechRequest(r)
+		if err != nil {
+			http.Error(w, "Bad request", http.StatusBadRequest)
+			log.Logger.Printf("%v", err)
+			return
+		}
+
+		// Pass the AudioPlayer as a pointer
+		err = speech.ProcessSpeech(*TokenReq, state.AzureSubscriptionKey, state.AzureRegion, state.AudioPlayer)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Failed to process token: %v", err), http.StatusInternalServerError)
+			log.Logger.Printf("Failed to process token: %v", err)
 			return
 		}
 
@@ -96,8 +120,12 @@ func ConnectToServer(port int) {
 	log.Logger.Printf("Server response: %s\n", resp.Status)
 }
 
-func processInputRequest(r *http.Request) (*speech.PlayRequest, error) {
-	var req speech.PlayRequest
+func processSpeechRequest(r *http.Request) (*speech.SpeechRequest, error) {
+	var req speech.SpeechRequest
+
+	// this should just take in string not http.Request, 
+	// body should be parsed in parent function
+	// I want this to work with /input and /token
 
 	// Read the request body
 	bodyBytes, err := io.ReadAll(r.Body)
@@ -118,10 +146,7 @@ func processInputRequest(r *http.Request) (*speech.PlayRequest, error) {
 		return nil, fmt.Errorf("failed to parse text from request: %v", err)
 	}
 
-	// Log the request
-	log.Logger.Printf("Received POST request to /play with text: %s", text)
-
-	playReq := speech.PlayRequest{
+	playReq := speech.SpeechRequest{
 		Text:      text,
 		Gender:    req.Gender,
 		VoiceName: req.VoiceName,

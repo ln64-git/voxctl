@@ -106,7 +106,7 @@ func processRequest(state types.AppState) {
 
 	case state.Input != "":
 		log.Logger.Println("Input requested.")
-		playReq := speech.PlayRequest{
+		playReq := speech.SpeechRequest{
 			Text:      state.Input,
 			Gender:    state.VoiceGender,
 			VoiceName: state.VoiceName,

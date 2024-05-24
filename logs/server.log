@@ -1,0 +1,7 @@
+2024/05/24 16:51:35 voxctl.go:89: Program Exiting
+2024/05/24 16:51:38 voxctl.go:31: main - Program Started
+2024/05/24 16:51:38 voxctl.go:74: Server is already running on port 8080. Connecting to the existing server...
+2024/05/24 16:51:38 server.go:113: Connected to the server on port 8080.
+2024/05/24 16:51:38 server.go:120: Server response: 200 OK
+2024/05/24 16:51:38 voxctl.go:108: Input requested.
+2024/05/24 16:51:38 voxctl.go:121: Input response: 200 OK
