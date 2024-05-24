@@ -62,6 +62,7 @@ func main() {
 		ServerAlreadyRunning: serverAlreadyRunning,
 	}
 
+	// Launch Server if not already running on Port
 	if !serverAlreadyRunning {
 		state.AudioPlayer = audio.NewAudioPlayer()
 		go server.StartServer(state)
@@ -87,7 +88,8 @@ func main() {
 func processRequest(state types.AppState) {
 	client := &http.Client{}
 
-	if state.StatusRequested {
+	switch {
+	case state.StatusRequested:
 		log.Logger.Println("Status requested.")
 		resp, err := client.Get(fmt.Sprintf("http://localhost:%d/status", state.Port))
 		if err != nil {
@@ -97,9 +99,8 @@ func processRequest(state types.AppState) {
 		defer resp.Body.Close()
 		body, _ := io.ReadAll(resp.Body)
 		log.Logger.Printf("Status response: %s\n", string(body))
-	}
 
-	if state.Input != "" {
+	case state.Input != "":
 		log.Logger.Println("Input requested.")
 		playReq := speech.PlayRequest{
 			Text:      state.Input,
@@ -114,9 +115,8 @@ func processRequest(state types.AppState) {
 		}
 		defer resp.Body.Close()
 		log.Logger.Printf("Input response: %s\n", resp.Status)
-	}
 
-	if state.PauseRequested {
+	case state.PauseRequested:
 		log.Logger.Println("Pause requested.")
 		resp, err := client.Post(fmt.Sprintf("http://localhost:%d/pause", state.Port), "", nil)
 		if err != nil {
@@ -125,9 +125,8 @@ func processRequest(state types.AppState) {
 		}
 		defer resp.Body.Close()
 		log.Logger.Printf("Pause response: %s\n", resp.Status)
-	}
 
-	if state.StopRequested {
+	case state.StopRequested:
 		log.Logger.Println("Stop requested.")
 		resp, err := client.Post(fmt.Sprintf("http://localhost:%d/stop", state.Port), "", nil)
 		if err != nil {
