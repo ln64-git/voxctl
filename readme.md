@@ -4,7 +4,7 @@ voxel is a terminal-based text-to-speech interface designed with modularity in m
 
 ## Installation
 
-1. Clone and build repository:
+Clone and build repository:
 
 ```
 git clone https://github.com/ln64-git/voxctl.git
@@ -27,16 +27,16 @@ go build cmd/voxctl.go
 
 ### Examples
 
-1. Launch server on a specified port:
+Launch server on a specified port:
 
 ```
-./voxctl -port 1964
+./voxctl -port 7000
 ```
 
-2. Send input to server:
+Send input to server:
 
 ```
-./voxctl -input "Hello Server!!" -port 1964 -quit
+./voxctl -input "Hello Server!!" -port 7000 -quit
 ```
 
 ## Configuration
