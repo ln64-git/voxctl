@@ -1,18 +1,19 @@
-// input/input.go
 package input
 
 import (
-	"strings"
+	"encoding/json"
+
+	"github.com/ln64-git/voxctl/internal/log"
+	"github.com/ln64-git/voxctl/internal/speech"
 )
 
-// ParseTextFromRequest extracts the text field from a JSON request body
 func SanitizeInput(requestBody string) (string, error) {
-	// Remove all extra characters
-	bodyString := strings.ReplaceAll(requestBody, "\n", "")
-	bodyString = strings.ReplaceAll(bodyString, "\t", "")
+	var req speech.PlayRequest
+	err := json.Unmarshal([]byte(requestBody), &req)
+	if err != nil {
+		return "", err
+	}
 
-	// Trim leading and trailing whitespace
-	text := strings.TrimSpace(bodyString)
-
-	return text, nil
+	log.Logger.Printf("text: %s", req.Text)
+	return req.Text, nil
 }
