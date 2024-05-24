@@ -10,9 +10,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ln64-git/sandbox/internal/log"
-	"github.com/ln64-git/sandbox/internal/speech"
-	"github.com/ln64-git/sandbox/internal/types"
+	"github.com/ln64-git/voxctl/internal/log"
+	"github.com/ln64-git/voxctl/internal/speech"
+	"github.com/ln64-git/voxctl/internal/types"
 )
 
 func StartServer(state types.AppState) {

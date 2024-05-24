@@ -9,7 +9,7 @@ import (
 	"github.com/faiface/beep"
 	"github.com/faiface/beep/speaker"
 	"github.com/faiface/beep/wav"
-	"github.com/ln64-git/sandbox/internal/log"
+	"github.com/ln64-git/voxctl/internal/log"
 )
 
 type AudioPlayer struct {

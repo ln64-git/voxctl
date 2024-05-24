@@ -25,7 +25,7 @@ func GetConfig() (Config, error) {
 	}
 
 	// Construct the path to the configuration file
-	configFile := filepath.Join(user.HomeDir, ".config", "voxctl", "config.json")
+	configFile := filepath.Join(user.HomeDir, "voxctl.json")
 
 	// Load the configuration from the JSON file
 	err = readConfig(configFile, &cfg)

@@ -3,9 +3,9 @@ package speech
 import (
 	"fmt"
 
-	"github.com/ln64-git/sandbox/external/azure"
-	"github.com/ln64-git/sandbox/internal/audio"
-	"github.com/ln64-git/sandbox/internal/log"
+	"github.com/ln64-git/voxctl/external/azure"
+	"github.com/ln64-git/voxctl/internal/audio"
+	"github.com/ln64-git/voxctl/internal/log"
 )
 
 type PlayRequest struct {

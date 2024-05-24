@@ -10,12 +10,12 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/ln64-git/sandbox/internal/audio"
-	"github.com/ln64-git/sandbox/internal/config"
-	"github.com/ln64-git/sandbox/internal/log"
-	"github.com/ln64-git/sandbox/internal/server"
-	"github.com/ln64-git/sandbox/internal/speech"
-	"github.com/ln64-git/sandbox/internal/types"
+	"github.com/ln64-git/voxctl/internal/audio"
+	"github.com/ln64-git/voxctl/internal/config"
+	"github.com/ln64-git/voxctl/internal/log"
+	"github.com/ln64-git/voxctl/internal/server"
+	"github.com/ln64-git/voxctl/internal/speech"
+	"github.com/ln64-git/voxctl/internal/types"
 )
 
 func main() {
