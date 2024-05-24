@@ -30,13 +30,13 @@ go build cmd/voxctl.go
 1. Launch server on a specified port:
 
 ```
-./voxctl -port 4202
+./voxctl -port 1964
 ```
 
 2. Send input to server:
 
 ```
-./voxctl -input "Hello Server!!" -port 4202 -quit
+./voxctl -input "Hello Server!!" -port 1964 -quit
 ```
 
 ## Configuration
