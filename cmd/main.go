@@ -1,73 +1,49 @@
 package main
 
 import (
-	"flag"
 	"fmt"
-	"io"
-	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/ln64-git/voxctl/internal/model"
+	"github.com/ln64-git/sandbox/internal/config"
+	"github.com/ln64-git/sandbox/internal/log"
+	"github.com/ln64-git/sandbox/internal/server"
 )
 
 func main() {
-	input := flag.String("play", "", "Input text to play")
-	port := flag.Int("port", 8080, "Port number to connect or serve")
-	quit := flag.Bool("quit", false, "Exit application after request")
-	pause := flag.Bool("pause", false, "Pause audio playback")
-	stop := flag.Bool("stop", false, "Stop audio playback")
-	flag.Parse()
-
-	initialModel := model.InitialModel(*input, *port, *quit)
-
-	if *pause {
-		pauseAudio(*port)
-	}
-
-	if *stop {
-		stopAudio(*port)
-	}
-
-	if !*pause && !*stop {
-		p := tea.NewProgram(initialModel)
-		if _, err := p.Run(); err != nil {
-			fmt.Println("Error running program:", err)
-			os.Exit(1)
-		}
-	}
-}
-
-func pauseAudio(port int) {
-	resp, err := http.Post(fmt.Sprintf("http://localhost:%d/pause", port), "application/json", nil)
+	// Initialize the logger
+	err := log.InitLogger()
 	if err != nil {
-		fmt.Println("Error pausing audio:", err)
+		fmt.Printf("Failed to initialize logger: %v\n", err)
 		return
 	}
-	defer resp.Body.Close()
+	defer log.Logger.Writer()
+	log.Logger.Println("main - Program Started")
 
-	body, err := io.ReadAll(resp.Body)
+	// Get the configuration
+	cfg, err := config.GetConfig()
 	if err != nil {
-		fmt.Println("Error reading response body:", err)
+		log.Logger.Printf("Failed to get configuration: %v\n", err)
 		return
 	}
 
-	fmt.Println(string(body))
-}
+	// Define the port
+	port := 8080
 
-func stopAudio(port int) {
-	resp, err := http.Post(fmt.Sprintf("http://localhost:%d/stop", port), "application/json", nil)
-	if err != nil {
-		fmt.Println("Error stopping audio:", err)
-		return
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		fmt.Println("Error reading response body:", err)
-		return
+	// Check if the server is already running
+	isRunning := server.CheckServerRunning(port)
+	if isRunning {
+		log.Logger.Printf("Server is already running on port %d. Connecting to the existing server...\n", port)
+		server.ConnectToServer(port)
+	} else {
+		// Start the server
+		go server.StartServer(port, cfg.AzureSubscriptionKey, cfg.AzureRegion)
 	}
 
-	fmt.Println(string(body))
+	// Block main from exiting
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+	log.Logger.Println("main - Program Exiting")
 }

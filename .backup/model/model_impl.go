@@ -20,6 +20,8 @@ type config struct {
 }
 
 type model struct {
+	userPause            bool
+	userStop             bool
 	userQuit             bool
 	userRequest          bool
 	userInput            string
@@ -32,7 +34,7 @@ type model struct {
 	state                *types.State
 }
 
-func InitialModel(input string, port int, quit bool) model {
+func InitialModel(input string, port int, quit bool, pause bool, stop bool) model {
 	// Get the user's home directory
 	user, err := user.Current()
 	if err != nil {
@@ -64,6 +66,8 @@ func InitialModel(input string, port int, quit bool) model {
 	go server.StartServer(port, cfg.AzureSubscriptionKey, cfg.AzureRegion, state)
 
 	return model{
+		userPause:            pause,
+		userStop:             stop,
 		userQuit:             quit,
 		userRequest:          userRequest,
 		userInput:            input,

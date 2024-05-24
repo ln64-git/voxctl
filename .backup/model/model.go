@@ -15,6 +15,15 @@ func (m model) Init() tea.Cmd {
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	m.state.SetStatus("Ready")
+	if m.userPause {
+		m.state.SetStatus("Ready")
+		return m, handlePause(m)
+	}
+	if m.userStop {
+		m.state.SetStatus("Ready")
+		return m, handleStop(m)
+	}
+
 	if m.userRequest {
 		if m.userInput != "" {
 			m.sendPlayRequest()
@@ -50,9 +59,29 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.state.SetStatus("Ready")
 		m.userInput = ""
 		return m, nil
+	case pausedMsg:
+		m.state.SetStatus("Paused")
+		return m, nil
+	case stoppedMsg:
+		m.state.SetStatus("Stopped")
+		return m, nil
 	}
 
 	return m, nil
+}
+
+func handlePause(m model) tea.Cmd {
+	return tea.Cmd(func() tea.Msg {
+		m.sendPauseRequest()
+		return tea.Quit
+	})
+}
+
+func handleStop(m model) tea.Cmd {
+	return tea.Cmd(func() tea.Msg {
+		m.sendStopRequest()
+		return tea.Quit
+	})
 }
 
 func (m model) sendPlayRequest() tea.Msg {
@@ -74,5 +103,47 @@ func (m model) sendPlayRequest() tea.Msg {
 	return playedMsg{}
 }
 
+func (m model) sendPauseRequest() tea.Msg {
+	req, err := http.NewRequest("POST", fmt.Sprintf("http://localhost:%d/pause", m.userPort), nil)
+	if err != nil {
+		return errMsg{err}
+	}
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return errMsg{err}
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return errMsg{fmt.Errorf("server returned status code %d", resp.StatusCode)}
+	}
+
+	return pausedMsg{}
+}
+
+func (m model) sendStopRequest() tea.Msg {
+	req, err := http.NewRequest("POST", fmt.Sprintf("http://localhost:%d/stop", m.userPort), nil)
+	if err != nil {
+		return errMsg{err}
+	}
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return errMsg{err}
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return errMsg{fmt.Errorf("server returned status code %d", resp.StatusCode)}
+	}
+
+	return stoppedMsg{}
+}
+
+type pausedMsg struct{}
+type stoppedMsg struct{}
 type errMsg struct{ err error }
 type playedMsg struct{}

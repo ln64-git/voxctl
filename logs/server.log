@@ -1,9 +1,2 @@
-2024/05/23 04:57:35 server.go:36: Starting server on port 8080
-2024/05/23 04:57:35 server.go:105: Failed to start server: listen tcp :8080: bind: address already in use
-2024/05/23 04:57:35 server.go:55: Failed to decode request body: invalid character 'h' after object key:value pair
-2024/05/23 04:57:43 server.go:55: Failed to decode request body: invalid character 'h' after object key:value pair
-2024/05/23 04:57:44 server.go:55: Failed to decode request body: invalid character 'h' after object key:value pair
-2024/05/23 04:57:46 server.go:36: Starting server on port 8080
-2024/05/23 04:57:46 server.go:105: Failed to start server: listen tcp :8080: bind: address already in use
-2024/05/23 04:57:46 server.go:63: Received POST request to /play with text: With this change, you're now using the recommended way of reading the response body in Go 1.16 and later versions.
-2024/05/23 04:57:47 server.go:74: Speech synthesized and added to the queue
+2024/05/23 21:57:18 main.go:22: main - Program Started
+2024/05/23 21:57:18 server.go:28: Starting server on port 8080
