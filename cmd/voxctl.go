@@ -1,7 +1,9 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
@@ -29,8 +31,9 @@ func main() {
 	log.Logger.Println("main - Program Started")
 
 	// Initialize flag arguments
-	flagInput := flag.String("input", "", "Input text to play")
 	flagPort := flag.Int("port", 8080, "Port number to connect or serve")
+	flagToken := flag.String("token", "", "Process input stream token")
+	flagInput := flag.String("input", "", "Input text to play")
 	flagStatus := flag.Bool("status", false, "Request info")
 	flagQuit := flag.Bool("quit", false, "Exit application after request")
 	flagPause := flag.Bool("pause", false, "Pause audio playback")
@@ -49,8 +52,9 @@ func main() {
 
 	// Create state struct
 	state := types.AppState{
-		Input:                *flagInput,
 		Port:                 *flagPort,
+		Token:                *flagToken,
+		Input:                *flagInput,
 		StatusRequested:      *flagStatus,
 		QuitRequested:        *flagQuit,
 		PauseRequested:       *flagPause,
@@ -135,5 +139,39 @@ func processRequest(state types.AppState) {
 		}
 		defer resp.Body.Close()
 		log.Logger.Printf("Stop response: %s\n", resp.Status)
+
+	case state.Token != "":
+		log.Logger.Println("Stream input detected.")
+		var audioData []byte
+		pipeReader, pipeWriter := io.Pipe()
+		go func() {
+			defer pipeWriter.Close()
+			scanner := bufio.NewScanner(os.Stdin)
+			for scanner.Scan() {
+				line := scanner.Text()
+				var resp types.OllamaResponse
+				err := json.Unmarshal([]byte(line), &resp)
+				if err != nil {
+					log.Logger.Printf("Failed to unmarshal ollama response: %v\n", err)
+					continue
+				}
+				if resp.Done {
+					break
+				}
+				_, err = pipeWriter.Write([]byte(resp.Response))
+				if err != nil {
+					log.Logger.Printf("Failed to write to pipe: %v\n", err)
+					break
+				}
+			}
+		}()
+
+		audioData, err := io.ReadAll(pipeReader)
+		if err != nil {
+			log.Logger.Printf("Failed to read piped input: %v\n", err)
+			return
+		}
+
+		state.AudioPlayer.Play(audioData)
 	}
 }
