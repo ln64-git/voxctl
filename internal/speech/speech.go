@@ -1,3 +1,4 @@
+// speech/speech.go
 package speech
 
 import (
@@ -14,34 +15,40 @@ type SpeechRequest struct {
 	VoiceName string `json:"voiceName"`
 }
 
-func (r SpeechRequest) ToJSON() string {
+func (r SpeechRequest) SpeechRequestToJSON() string {
 	return fmt.Sprintf(`{"text":"%s","gender":"%s","voiceName":"%s"}`, r.Text, r.Gender, r.VoiceName)
 }
 
-func ProcessSpeech(req SpeechRequest, azureSubscriptionKey, azureRegion string, audioPlayer *audio.AudioPlayer) error {
+func ProcessSpeech(logger *log.Logger, req SpeechRequest, azureSubscriptionKey, azureRegion string, audioPlayer *audio.AudioPlayer) error {
+	segments := getSegmentedText(req.Text)
+	for _, segment := range segments {
+		audioData, err := azure.SynthesizeSpeech(azureSubscriptionKey, azureRegion, segment, req.Gender, req.VoiceName)
+		if err != nil {
+			logger.Errorf("%s", err)
+			return err
+		}
+
+		audioPlayer.Play(audioData)
+		logger.Infof("Speech processed: %s", segment) // Example log message
+	}
+	return nil
+}
+
+func getSegmentedText(text string) []string {
 	var sentences []string
 	var currentSentence string
 
-	for i, char := range req.Text {
-		if char == ',' {
+	for i, char := range text {
+		if char == ',' || char == '.' || char == '!' || char == '?' {
 			sentences = append(sentences, currentSentence)
 			currentSentence = ""
 		} else {
 			currentSentence += string(char)
-			if i == len(req.Text)-1 {
+			if i == len(text)-1 {
 				sentences = append(sentences, currentSentence)
 			}
 		}
 	}
 
-	for _, sentence := range sentences {
-		audioData, err := azure.SynthesizeSpeech(azureSubscriptionKey, azureRegion, sentence, req.Gender, req.VoiceName)
-		if err != nil {
-			log.Logger.Printf("Failed to synthesize speech: %v", err)
-			return err
-		}
-		audioPlayer.Play(audioData)
-	}
-
-	return nil
+	return sentences
 }

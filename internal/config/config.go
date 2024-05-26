@@ -8,41 +8,51 @@ import (
 	"path/filepath"
 )
 
-type Config struct {
-	AzureSubscriptionKey string `json:"azure_subscription_key"`
-	AzureRegion          string `json:"azure_region"`
-	VoiceGender          string `json:"voice_gender"`
-	VoiceName            string `json:"voice_name"`
-}
+// GetConfig retrieves the configuration from a JSON file in the user's home directory.
+func GetConfig(configName string) (map[string]interface{}, error) {
+	var cfg map[string]interface{}
 
-func GetConfig() (Config, error) {
-	var cfg Config
-
-	// Get the user's home directory
+	// Get current user's home directory
 	user, err := user.Current()
 	if err != nil {
-		return cfg, fmt.Errorf("error getting user's home directory: %v", err)
+		return nil, fmt.Errorf("error getting user's home directory: %v", err)
 	}
 
-	// Construct the path to the configuration file
-	configFile := filepath.Join(user.HomeDir, "voxctl.json")
+	// Construct file path
+	configFile := filepath.Join(user.HomeDir, configName)
 
-	// Load the configuration from the JSON file
+	// Load configuration
 	err = readConfig(configFile, &cfg)
 	if err != nil {
-		return cfg, fmt.Errorf("error reading configuration: %v", err)
+		return nil, fmt.Errorf("error reading configuration: %v", err)
 	}
+
 	return cfg, nil
 }
 
-func readConfig(configFile string, cfg *Config) error {
+// readConfig reads and unmarshals the configuration file.
+func readConfig(configFile string, cfg *map[string]interface{}) error {
+	// Read file
 	data, err := os.ReadFile(configFile)
 	if err != nil {
 		return err
 	}
+
+	// Unmarshal JSON
 	err = json.Unmarshal(data, cfg)
 	if err != nil {
 		return err
 	}
+
 	return nil
+}
+
+// GetStringOrDefault retrieves a string value from the configuration map, or returns a default value if the key is not present or the value is not a string.
+func GetStringOrDefault(cfg map[string]interface{}, key string, defaultValue string) string {
+	if value, ok := cfg[key]; ok {
+		if strValue, ok := value.(string); ok {
+			return strValue
+		}
+	}
+	return defaultValue
 }

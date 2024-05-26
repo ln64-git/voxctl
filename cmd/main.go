@@ -18,17 +18,18 @@ import (
 	"github.com/ln64-git/voxctl/internal/server"
 	"github.com/ln64-git/voxctl/internal/speech"
 	"github.com/ln64-git/voxctl/internal/types"
+	"github.com/sirupsen/logrus"
 )
 
 func main() {
-	err := log.InitLogger()
+	// Initialize the logger with default configuration
+	cfg := log.DefaultConfig()
+	logger, err := log.InitLogger(cfg)
 	if err != nil {
-		fmt.Printf("Failed to initialize logger: %v\n", err)
-		return
+		logrus.Fatalf("could not initialize logger: %v", err)
 	}
-	defer log.Logger.Writer()
-	log.Logger.Println("main - Program Started")
 
+	// Parse command-line flags
 	flagPort := flag.Int("port", 8080, "Port number to connect or serve")
 	flagToken := flag.String("token", "", "Process input stream token")
 	flagInput := flag.String("input", "", "Input text to play")
@@ -38,14 +39,14 @@ func main() {
 	flagStop := flag.Bool("stop", false, "Stop audio playback")
 	flag.Parse()
 
-	cfg, err := config.GetConfig()
+	// Retrieve configuration
+	configName := "voxctl.json"
+	configData, err := config.GetConfig(configName)
 	if err != nil {
-		log.Logger.Printf("Failed to get configuration: %v\n", err)
-		return
+		logrus.Fatalf("failed to load configuration: %v", err)
 	}
 
-	serverAlreadyRunning := server.CheckServerRunning(*flagPort)
-
+	// Populate state from configuration
 	state := types.AppState{
 		Port:                 *flagPort,
 		Token:                *flagToken,
@@ -54,31 +55,39 @@ func main() {
 		QuitRequested:        *flagQuit,
 		PauseRequested:       *flagPause,
 		StopRequested:        *flagStop,
-		AzureSubscriptionKey: cfg.AzureSubscriptionKey,
-		AzureRegion:          cfg.AzureRegion,
-		VoiceGender:          cfg.VoiceGender,
-		VoiceName:            cfg.VoiceName,
-		ServerAlreadyRunning: serverAlreadyRunning,
+		AzureSubscriptionKey: config.GetStringOrDefault(configData, "AzureSubscriptionKey", ""),
+		AzureRegion:          config.GetStringOrDefault(configData, "AzureRegion", "eastus"),
+		VoiceGender:          config.GetStringOrDefault(configData, "VoiceGender", "Female"),
+		VoiceName:            config.GetStringOrDefault(configData, "VoiceName", "en-US-JennyNeural"),
+		ServerAlreadyRunning: server.CheckServerRunning(*flagPort),
+		Logger:               logger,
 	}
 
-	if !serverAlreadyRunning {
+	// Check if server is already running
+	if !server.CheckServerRunning(state.Port) {
 		state.AudioPlayer = audio.NewAudioPlayer()
 		go server.StartServer(state)
 	} else {
-		log.Logger.Printf("Server is already running on port %d. Connecting to the existing server...\n", state.Port)
-		server.ConnectToServer(state.Port)
+		resp, err := server.ConnectToServer(state.Port)
+		if err != nil {
+			state.Logger.Errorf("Failed to connect to the existing server on port %d: %v", state.Port, err)
+		} else {
+			state.Logger.Infof("Connected to the existing server on port %d. Status: %s", state.Port, resp.Status)
+			resp.Body.Close()
+		}
 	}
 
 	processRequest(state)
 	if state.QuitRequested {
-		log.Logger.Println("Quit flag requested, Program Exiting")
+		state.Logger.Info("Quit flag requested, Program Exiting")
 		return
 	}
 
+	// Handle OS signals for graceful shutdown
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
-	log.Logger.Println("Program Exiting")
+	state.Logger.Infof("Program Exiting")
 }
 
 func processRequest(state types.AppState) {
@@ -86,54 +95,40 @@ func processRequest(state types.AppState) {
 
 	switch {
 	case state.StatusRequested:
-		log.Logger.Println("Status requested.")
 		resp, err := client.Get(fmt.Sprintf("http://localhost:%d/status", state.Port))
 		if err != nil {
-			log.Logger.Printf("Failed to get status: %v\n", err)
 			return
 		}
 		defer resp.Body.Close()
-		body, _ := io.ReadAll(resp.Body)
-		log.Logger.Printf("Status response: %s\n", string(body))
 
 	case state.Input != "":
-		log.Logger.Println("Input requested.")
-		playReq := speech.SpeechRequest{
+		speechReq := speech.SpeechRequest{
 			Text:      state.Input,
 			Gender:    state.VoiceGender,
 			VoiceName: state.VoiceName,
 		}
-		body := bytes.NewBufferString(playReq.ToJSON())
+		body := bytes.NewBufferString(speechReq.SpeechRequestToJSON())
 		resp, err := client.Post(fmt.Sprintf("http://localhost:%d/input", state.Port), "application/json", body)
 		if err != nil {
-			log.Logger.Printf("Failed to send input request: %v\n", err)
 			return
 		}
 		defer resp.Body.Close()
-		log.Logger.Printf("Input response: %s\n", resp.Status)
 
 	case state.PauseRequested:
-		log.Logger.Println("Pause requested.")
 		resp, err := client.Post(fmt.Sprintf("http://localhost:%d/pause", state.Port), "", nil)
 		if err != nil {
-			log.Logger.Printf("Failed to send pause request: %v\n", err)
 			return
 		}
 		defer resp.Body.Close()
-		log.Logger.Printf("Pause response: %s\n", resp.Status)
 
 	case state.StopRequested:
-		log.Logger.Println("Stop requested.")
 		resp, err := client.Post(fmt.Sprintf("http://localhost:%d/stop", state.Port), "", nil)
 		if err != nil {
-			log.Logger.Printf("Failed to send stop request: %v\n", err)
 			return
 		}
 		defer resp.Body.Close()
-		log.Logger.Printf("Stop response: %s\n", resp.Status)
 
 	case state.Token != "":
-		log.Logger.Println("Token input detected.")
 		pipeReader, pipeWriter := io.Pipe()
 		go func() {
 			defer pipeWriter.Close()
@@ -143,7 +138,6 @@ func processRequest(state types.AppState) {
 				var resp types.OllamaResponse
 				err := json.Unmarshal([]byte(line), &resp)
 				if err != nil {
-					log.Logger.Printf("Failed to unmarshal ollama response: %v\n", err)
 					continue
 				}
 				if resp.Done {
@@ -151,7 +145,6 @@ func processRequest(state types.AppState) {
 				}
 				_, err = pipeWriter.Write([]byte(resp.Response))
 				if err != nil {
-					log.Logger.Printf("Failed to write to pipe: %v\n", err)
 					break
 				}
 			}
@@ -159,7 +152,6 @@ func processRequest(state types.AppState) {
 
 		tokenText, err := io.ReadAll(pipeReader)
 		if err != nil {
-			log.Logger.Printf("Failed to read piped input: %v\n", err)
 			return
 		}
 
@@ -168,13 +160,11 @@ func processRequest(state types.AppState) {
 			Gender:    state.VoiceGender,
 			VoiceName: state.VoiceName,
 		}
-		body := bytes.NewBufferString(tokenReq.ToJSON())
+		body := bytes.NewBufferString(tokenReq.SpeechRequestToJSON())
 		resp, err := client.Post(fmt.Sprintf("http://localhost:%d/token", state.Port), "application/json", body)
 		if err != nil {
-			log.Logger.Printf("Failed to send token request: %v\n", err)
 			return
 		}
 		defer resp.Body.Close()
-		log.Logger.Printf("Token response: %s\n", resp.Status)
 	}
 }

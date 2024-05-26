@@ -1,0 +1,1 @@
+curl http://localhost:11434/api/generate -d '{"model": "llama2-uncensored","prompt":"give me three sentences."}' | go run cmd/voxctl.go -token "$(cat)"
