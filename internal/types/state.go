@@ -2,7 +2,6 @@ package types
 
 import (
 	"github.com/ln64-git/voxctl/internal/audio"
-	"github.com/ln64-git/voxctl/internal/log"
 )
 
 // State struct to hold program state
@@ -20,7 +19,6 @@ type AppState struct {
 	VoiceName            string
 	AudioPlayer          *audio.AudioPlayer
 	ServerAlreadyRunning bool
-	Logger               *log.Logger
 }
 
 type SpeechRequest struct {

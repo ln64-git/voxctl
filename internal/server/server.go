@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/charmbracelet/log"
 	"github.com/ln64-git/voxctl/external/azure"
 	"github.com/ln64-git/voxctl/internal/speech"
 	"github.com/ln64-git/voxctl/internal/types"
@@ -16,7 +17,7 @@ import (
 
 func StartServer(state types.AppState) {
 	port := state.Port
-	state.Logger.Infof("Starting server on port %d", port)
+	log.Infof("Starting server on port %d", port)
 
 	http.HandleFunc("/status", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
@@ -27,17 +28,17 @@ func StartServer(state types.AppState) {
 	})
 
 	http.HandleFunc("/input", func(w http.ResponseWriter, r *http.Request) {
-		state.Logger.Infof("Input endpoint called")
+		log.Infof("Input endpoint called")
 
 		inputReq, err := processSpeechRequest(r)
 		if err != nil {
-			state.Logger.Errorf("%v", err)
+			log.Errorf("%v", err)
 			return
 		}
 
-		err = speech.ProcessSpeech(state.Logger, *inputReq, state.AzureSubscriptionKey, state.AzureRegion, state.AudioPlayer)
+		err = speech.ProcessSpeech(*inputReq, state.AzureSubscriptionKey, state.AzureRegion, state.AudioPlayer)
 		if err != nil {
-			state.Logger.Errorf("%v", err)
+			log.Errorf("%v", err)
 			return
 		}
 
@@ -47,7 +48,7 @@ func StartServer(state types.AppState) {
 	http.HandleFunc("/token", func(w http.ResponseWriter, r *http.Request) {
 		tokenReq, err := processSpeechRequest(r)
 		if err != nil {
-			state.Logger.Errorf("%v", err)
+			log.Errorf("%v", err)
 			return
 		}
 
@@ -68,7 +69,7 @@ func StartServer(state types.AppState) {
 		for _, sentence := range sentences {
 			audioData, err := azure.SynthesizeSpeech(state.AzureSubscriptionKey, state.AzureRegion, sentence, tokenReq.Gender, tokenReq.VoiceName)
 			if err != nil {
-				state.Logger.Errorf("%v", err)
+				log.Errorf("%v", err)
 				return
 			}
 			state.AudioPlayer.Play(audioData)
@@ -82,7 +83,7 @@ func StartServer(state types.AppState) {
 			state.AudioPlayer.Pause()
 			w.WriteHeader(http.StatusOK)
 		} else {
-			state.Logger.Error("AudioPlayer not initialized")
+			log.Error("AudioPlayer not initialized")
 		}
 	})
 
@@ -91,14 +92,14 @@ func StartServer(state types.AppState) {
 			state.AudioPlayer.Stop()
 			w.WriteHeader(http.StatusOK)
 		} else {
-			state.Logger.Error("AudioPlayer not initialized")
+			log.Error("AudioPlayer not initialized")
 		}
 	})
 
 	addr := ":" + strconv.Itoa(port)
 	err := http.ListenAndServe(addr, nil)
 	if err != nil {
-		state.Logger.Errorf("%v", err)
+		log.Errorf("%v", err)
 	}
 }
 

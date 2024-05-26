@@ -43,12 +43,10 @@ func (ap *AudioPlayer) Play(audioData []byte) {
 	ap.mutex.Lock()
 	defer ap.mutex.Unlock()
 
-	log.Debugf("Appending audio data of length %d to the queue", len(audioData))
 	ap.audioQueue = append(ap.audioQueue, audioData)
 
 	if !ap.isAudioPlaying {
 		ap.isAudioPlaying = true
-		log.Debug("Starting audio playback")
 		go ap.playNextAudioChunk()
 	}
 }
@@ -60,7 +58,6 @@ func (ap *AudioPlayer) playNextAudioChunk() {
 	if len(ap.audioQueue) == 0 {
 		// Entire queue is finished, signal completion
 		ap.isAudioPlaying = false
-		log.Debug("Audio queue is empty, signaling completion")
 		close(ap.doneChannel) // Close the doneChannel to signal completion
 		return
 	}
@@ -71,7 +68,6 @@ func (ap *AudioPlayer) playNextAudioChunk() {
 	audioReader := bytes.NewReader(audioData)
 	audioReadCloser := io.NopCloser(audioReader)
 
-	log.Debug("Decoding audio data")
 	audioStreamer, format, err := wav.Decode(audioReadCloser)
 	if err != nil {
 		log.Errorf("Error decoding audio data: %v", err)
@@ -82,7 +78,6 @@ func (ap *AudioPlayer) playNextAudioChunk() {
 
 	if ap.audioFormat == (beep.Format{}) {
 		ap.audioFormat = format
-		log.Debugf("Initializing speaker with format: %+v", ap.audioFormat)
 		err = speaker.Init(ap.audioFormat.SampleRate, ap.audioFormat.SampleRate.N(time.Second/10))
 		if err != nil {
 			log.Errorf("Error initializing speaker: %v", err)
@@ -92,7 +87,6 @@ func (ap *AudioPlayer) playNextAudioChunk() {
 	}
 
 	ap.audioController = &beep.Ctrl{Streamer: audioStreamer, Paused: false}
-	log.Debugf("Created audio controller: %+v", ap.audioController)
 
 	var waitGroup sync.WaitGroup
 	waitGroup.Add(1)
@@ -102,7 +96,6 @@ func (ap *AudioPlayer) playNextAudioChunk() {
 
 	go func() {
 		waitGroup.Wait()
-		log.Debug("Audio chunk playback completed")
 		ap.playNextAudioChunkIfAvailable()
 	}()
 }
@@ -113,11 +106,9 @@ func (ap *AudioPlayer) playNextAudioChunkIfAvailable() {
 
 	if len(ap.audioQueue) > 0 {
 		ap.isAudioPlaying = true
-		log.Debug("Audio queue has more data, starting next playback")
 		go ap.playNextAudioChunk()
 	} else {
 		ap.isAudioPlaying = false
-		log.Debug("Audio queue is empty, stopping playback")
 	}
 }
 
@@ -127,7 +118,6 @@ func (ap *AudioPlayer) Pause() {
 
 	if ap.audioController != nil {
 		ap.audioController.Paused = true
-		log.Debug("Audio playback paused")
 	}
 }
 
@@ -137,7 +127,6 @@ func (ap *AudioPlayer) Resume() {
 
 	if ap.audioController != nil {
 		ap.audioController.Paused = false
-		log.Debug("Audio playback resumed")
 	}
 }
 
@@ -151,12 +140,10 @@ func (ap *AudioPlayer) Stop() {
 	if ap.audioController != nil {
 		if closer, ok := ap.audioController.Streamer.(io.Closer); ok {
 			closer.Close()
-			log.Debug("Closed audio streamer")
 		}
 		ap.doneChannel <- struct{}{}
 		ap.isAudioPlaying = false
 		ap.audioQueue = nil
-		log.Debug("Audio playback stopped")
 	}
 }
 
@@ -166,12 +153,9 @@ func (ap *AudioPlayer) WaitForCompletion() {
 
 	// Check if audio is already finished
 	if !ap.isAudioPlaying {
-		log.Debug("Audio playback already completed")
 		return
 	}
 
-	log.Debug("Waiting for audio playback completion")
 	// Wait on the done channel to signal completion
 	<-ap.doneChannel
-	log.Debug("Audio playback completed")
 }

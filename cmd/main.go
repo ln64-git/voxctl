@@ -12,9 +12,9 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/charmbracelet/log"
 	"github.com/ln64-git/voxctl/internal/audio"
 	"github.com/ln64-git/voxctl/internal/config"
-	"github.com/ln64-git/voxctl/internal/log"
 	"github.com/ln64-git/voxctl/internal/server"
 	"github.com/ln64-git/voxctl/internal/speech"
 	"github.com/ln64-git/voxctl/internal/types"
@@ -22,12 +22,6 @@ import (
 )
 
 func main() {
-	// Initialize the logger with default configuration
-	cfg := log.DefaultConfig()
-	logger, err := log.InitLogger(cfg)
-	if err != nil {
-		logrus.Fatalf("could not initialize logger: %v", err)
-	}
 
 	// Parse command-line flags
 	flagPort := flag.Int("port", 8080, "Port number to connect or serve")
@@ -60,7 +54,6 @@ func main() {
 		VoiceGender:          config.GetStringOrDefault(configData, "VoiceGender", "Female"),
 		VoiceName:            config.GetStringOrDefault(configData, "VoiceName", "en-US-JennyNeural"),
 		ServerAlreadyRunning: server.CheckServerRunning(*flagPort),
-		Logger:               logger,
 	}
 
 	// Check if server is already running
@@ -70,16 +63,16 @@ func main() {
 	} else {
 		resp, err := server.ConnectToServer(state.Port)
 		if err != nil {
-			state.Logger.Errorf("Failed to connect to the existing server on port %d: %v", state.Port, err)
+			log.Errorf("Failed to connect to the existing server on port %d: %v", state.Port, err)
 		} else {
-			state.Logger.Infof("Connected to the existing server on port %d. Status: %s", state.Port, resp.Status)
+			log.Infof("Connected to the existing server on port %d. Status: %s", state.Port, resp.Status)
 			resp.Body.Close()
 		}
 	}
 
 	processRequest(state)
 	if state.QuitRequested {
-		state.Logger.Info("Quit flag requested, Program Exiting")
+		log.Info("Quit flag requested, Program Exiting")
 		return
 	}
 
@@ -87,7 +80,7 @@ func main() {
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
-	state.Logger.Infof("Program Exiting")
+	log.Infof("Program Exiting")
 }
 
 func processRequest(state types.AppState) {
