@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/charmbracelet/log"
 	"github.com/ln64-git/voxctl/internal/audio"
@@ -60,6 +61,7 @@ func main() {
 	if !server.CheckServerRunning(state.Port) {
 		state.AudioPlayer = audio.NewAudioPlayer()
 		go server.StartServer(state)
+		time.Sleep(35 * time.Millisecond)
 	} else {
 		resp, err := server.ConnectToServer(state.Port)
 		if err != nil {
@@ -95,6 +97,7 @@ func processRequest(state types.AppState) {
 		defer resp.Body.Close()
 
 	case state.Input != "":
+		// log.Info(state.Input)
 		speechReq := speech.SpeechRequest{
 			Text:      state.Input,
 			Gender:    state.VoiceGender,
