@@ -39,7 +39,7 @@ func (r SpeechRequest) SpeechRequestToJSON() string {
 // ProcessSpeech processes the speech request by synthesizing and playing the speech.
 func ProcessSpeech(req SpeechRequest, azureSubscriptionKey, azureRegion string, audioPlayer *audio.AudioPlayer) error {
 	sanitizedText := SanitizeInput(req.Text)
-	segments := getSegmentedText(sanitizedText)
+	segments := SegmentedText(sanitizedText)
 	for _, segment := range segments {
 		audioData, err := azure.SynthesizeSpeech(azureSubscriptionKey, azureRegion, segment, req.Gender, req.VoiceName)
 		if err != nil {
@@ -52,8 +52,22 @@ func ProcessSpeech(req SpeechRequest, azureSubscriptionKey, azureRegion string, 
 	return nil
 }
 
-// getSegmentedText splits text into segments based on punctuation.
-func getSegmentedText(text string) []string {
+func SegmentTextFromChannel(tokenChan <-chan string, sentenceChan chan<- string) {
+	defer close(sentenceChan)
+	var builder strings.Builder
+
+	for token := range tokenChan {
+		builder.WriteString(token)
+		if strings.ContainsAny(token, ",.!?") {
+			sentence := builder.String()
+			sentenceChan <- sentence
+			builder.Reset()
+		}
+	}
+}
+
+// SegmentedText splits text into segments based on punctuation.
+func SegmentedText(text string) []string {
 	var sentences []string
 	var currentSentence string
 	for i, char := range text {

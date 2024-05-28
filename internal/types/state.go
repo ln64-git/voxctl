@@ -7,8 +7,11 @@ import (
 // State struct to hold program state
 type AppState struct {
 	Port                 int
-	Token                string
-	Input                string
+	OllamaPort           int
+	OllamaModel          string
+	OllamaInput          string
+	OllamaPreface        string
+	SpeechInput          string
 	StatusRequested      bool
 	QuitRequested        bool
 	PauseRequested       bool

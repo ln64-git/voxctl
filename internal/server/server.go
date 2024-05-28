@@ -11,6 +11,7 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/ln64-git/voxctl/external/azure"
+	"github.com/ln64-git/voxctl/external/ollama"
 	"github.com/ln64-git/voxctl/internal/speech"
 	"github.com/ln64-git/voxctl/internal/types"
 )
@@ -28,15 +29,13 @@ func StartServer(state types.AppState) {
 	})
 
 	http.HandleFunc("/input", func(w http.ResponseWriter, r *http.Request) {
-		log.Infof("Input endpoint called")
-
-		inputReq, err := processSpeechRequest(r)
+		speechReq, err := processSpeechRequest(r)
 		if err != nil {
 			log.Errorf("%v", err)
 			return
 		}
 
-		err = speech.ProcessSpeech(*inputReq, state.AzureSubscriptionKey, state.AzureRegion, state.AudioPlayer)
+		err = speech.ProcessSpeech(*speechReq, state.AzureSubscriptionKey, state.AzureRegion, state.AudioPlayer)
 		if err != nil {
 			log.Errorf("%v", err)
 			return
@@ -45,37 +44,38 @@ func StartServer(state types.AppState) {
 		w.WriteHeader(http.StatusOK)
 	})
 
-	http.HandleFunc("/token", func(w http.ResponseWriter, r *http.Request) {
-		tokenReq, err := processSpeechRequest(r)
+	http.HandleFunc("/ollama", func(w http.ResponseWriter, r *http.Request) {
+		ollamaReq, err := processOllamaRequest(r)
 		if err != nil {
 			log.Errorf("%v", err)
+			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 
-		var sentences []string
-		var currentSentence string
-		for i, char := range tokenReq.Text {
-			if char == ',' || char == '.' || char == '!' || char == '?' {
-				sentences = append(sentences, currentSentence)
-				currentSentence = ""
-			} else {
-				currentSentence += string(char)
-				if i == len(tokenReq.Text)-1 {
-					sentences = append(sentences, currentSentence)
+		var finalPrompt = ollamaReq.Preface + ollamaReq.Prompt
+
+		tokenChan, err := ollama.GetOllamaTokenResponse(ollamaReq.Model, finalPrompt)
+		if err != nil {
+			log.Errorf("%v", err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		sentenceChan := make(chan string)
+		go speech.SegmentTextFromChannel(tokenChan, sentenceChan)
+
+		go func() {
+			for sentence := range sentenceChan {
+				audioData, err := azure.SynthesizeSpeech(state.AzureSubscriptionKey, state.AzureRegion, sentence, state.VoiceGender, state.VoiceName)
+				if err != nil {
+					log.Errorf("%v", err)
+					return
 				}
+				state.AudioPlayer.Play(audioData)
 			}
-		}
+		}()
 
-		for _, sentence := range sentences {
-			audioData, err := azure.SynthesizeSpeech(state.AzureSubscriptionKey, state.AzureRegion, sentence, tokenReq.Gender, tokenReq.VoiceName)
-			if err != nil {
-				log.Errorf("%v", err)
-				return
-			}
-			state.AudioPlayer.Play(audioData)
-		}
-
-		w.WriteHeader(http.StatusOK)
+		w.Header().Set("Content-Type", "text/plain")
 	})
 
 	http.HandleFunc("/pause", func(w http.ResponseWriter, r *http.Request) {
@@ -124,6 +124,22 @@ func ConnectToServer(port int) (*http.Response, error) {
 		return resp, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
 	}
 	return resp, nil
+}
+
+func processOllamaRequest(r *http.Request) (*ollama.OllamaRequest, error) {
+	var req ollama.OllamaRequest
+	bodyBytes, err := io.ReadAll(r.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read request body: %v", err)
+	}
+	defer r.Body.Close()
+
+	err = json.Unmarshal(bodyBytes, &req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode request body: %v", err)
+	}
+
+	return &req, nil
 }
 
 func processSpeechRequest(r *http.Request) (*speech.SpeechRequest, error) {

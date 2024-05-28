@@ -1,12 +1,10 @@
 package main
 
 import (
-	"bufio"
 	"bytes"
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io"
 	"net/http"
 	"os"
 	"os/signal"
@@ -14,6 +12,7 @@ import (
 	"time"
 
 	"github.com/charmbracelet/log"
+	"github.com/ln64-git/voxctl/external/ollama"
 	"github.com/ln64-git/voxctl/internal/audio"
 	"github.com/ln64-git/voxctl/internal/config"
 	"github.com/ln64-git/voxctl/internal/server"
@@ -25,8 +24,11 @@ import (
 func main() {
 
 	// Parse command-line flags
+	flagOllamaModel := flag.String("ollama_model", "", "Ollama model to use")
+	flagOllamaPreface := flag.String("ollama_preface", "", "Preface text for the Ollama prompt")
+	flagOllamaInput := flag.String("ollama_input", "", "input for ollama")
+	flagOllamaPort := flag.Int("ollama_port", 0, "input for ollama")
 	flagPort := flag.Int("port", 8080, "Port number to connect or serve")
-	flagToken := flag.String("token", "", "Process input stream token")
 	flagInput := flag.String("input", "", "Input text to play")
 	flagStatus := flag.Bool("status", false, "Request info")
 	flagQuit := flag.Bool("quit", false, "Exit application after request")
@@ -42,10 +44,21 @@ func main() {
 	}
 
 	// Populate state from configuration
+	var ollamaModel string
+	if *flagOllamaModel == "" {
+		ollamaModel = config.GetStringOrDefault(configData, "OllamaModel", "")
+	} else {
+		ollamaModel = *flagOllamaModel
+	}
+
+	// Populate state from configuration
 	state := types.AppState{
 		Port:                 *flagPort,
-		Token:                *flagToken,
-		Input:                *flagInput,
+		OllamaPort:           *flagOllamaPort,
+		OllamaModel:          ollamaModel,
+		OllamaPreface:        *flagOllamaPreface,
+		OllamaInput:          *flagOllamaInput,
+		SpeechInput:          *flagInput,
 		StatusRequested:      *flagStatus,
 		QuitRequested:        *flagQuit,
 		PauseRequested:       *flagPause,
@@ -96,10 +109,29 @@ func processRequest(state types.AppState) {
 		}
 		defer resp.Body.Close()
 
-	case state.Input != "":
+	case state.OllamaInput != "":
+		ollamaReq := ollama.OllamaRequest{
+			Model:   state.OllamaModel,
+			Prompt:  state.OllamaInput,
+			Preface: state.OllamaPreface,
+		}
+		body, err := json.Marshal(ollamaReq)
+		if err != nil {
+			logrus.Errorf("Failed to marshal Ollama request: %v", err)
+			return
+		}
+
+		resp, err := client.Post(fmt.Sprintf("http://localhost:%d/ollama", state.Port), "text/plain", bytes.NewBuffer(body))
+		if err != nil {
+			logrus.Errorf("Failed to send Ollama request: %v", err)
+			return
+		}
+		defer resp.Body.Close()
+
+	case state.SpeechInput != "":
 		// log.Info(state.Input)
 		speechReq := speech.SpeechRequest{
-			Text:      state.Input,
+			Text:      state.SpeechInput,
 			Gender:    state.VoiceGender,
 			VoiceName: state.VoiceName,
 		}
@@ -124,43 +156,5 @@ func processRequest(state types.AppState) {
 		}
 		defer resp.Body.Close()
 
-	case state.Token != "":
-		pipeReader, pipeWriter := io.Pipe()
-		go func() {
-			defer pipeWriter.Close()
-			scanner := bufio.NewScanner(os.Stdin)
-			for scanner.Scan() {
-				line := scanner.Text()
-				var resp types.OllamaResponse
-				err := json.Unmarshal([]byte(line), &resp)
-				if err != nil {
-					continue
-				}
-				if resp.Done {
-					break
-				}
-				_, err = pipeWriter.Write([]byte(resp.Response))
-				if err != nil {
-					break
-				}
-			}
-		}()
-
-		tokenText, err := io.ReadAll(pipeReader)
-		if err != nil {
-			return
-		}
-
-		tokenReq := speech.SpeechRequest{
-			Text:      string(tokenText),
-			Gender:    state.VoiceGender,
-			VoiceName: state.VoiceName,
-		}
-		body := bytes.NewBufferString(tokenReq.SpeechRequestToJSON())
-		resp, err := client.Post(fmt.Sprintf("http://localhost:%d/token", state.Port), "application/json", body)
-		if err != nil {
-			return
-		}
-		defer resp.Body.Close()
 	}
 }
