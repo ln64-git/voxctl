@@ -10,11 +10,12 @@ type AppState struct {
 	AudioPlayer             *audio.AudioPlayer
 	ServerAlreadyRunning    bool
 	StatusRequested         bool
-	QuitRequested           bool
+	StopRequested           bool
+	ClearRequested          bool
 	PauseRequested          bool
 	ResumeRequested         bool
 	TogglePlaybackRequested bool
-	StopRequested           bool
+	QuitRequested           bool
 	AzureSpeechInput        string
 	AzureSubscriptionKey    string
 	AzureRegion             string

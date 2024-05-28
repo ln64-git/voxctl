@@ -20,14 +20,6 @@ func StartServer(state types.AppState) {
 	port := state.Port
 	log.Infof("Starting server on port %d", port)
 
-	http.HandleFunc("/status", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodGet {
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
-		w.WriteHeader(http.StatusOK)
-	})
-
 	http.HandleFunc("/input", func(w http.ResponseWriter, r *http.Request) {
 		speechReq, err := processSpeechRequest(r)
 		if err != nil {
@@ -78,6 +70,32 @@ func StartServer(state types.AppState) {
 		w.Header().Set("Content-Type", "text/plain")
 	})
 
+	http.HandleFunc("/status", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+	})
+
+	http.HandleFunc("/stop", func(w http.ResponseWriter, r *http.Request) {
+		if state.AudioPlayer != nil {
+			state.AudioPlayer.Stop()
+			w.WriteHeader(http.StatusOK)
+		} else {
+			log.Error("AudioPlayer not initialized")
+		}
+	})
+
+	http.HandleFunc("/clear", func(w http.ResponseWriter, r *http.Request) {
+		if state.AudioPlayer != nil {
+			state.AudioPlayer.Clear()
+			w.WriteHeader(http.StatusOK)
+		} else {
+			log.Error("AudioPlayer not initialized")
+		}
+	})
+
 	http.HandleFunc("/pause", func(w http.ResponseWriter, r *http.Request) {
 		if state.AudioPlayer != nil {
 			state.AudioPlayer.Pause()
@@ -103,15 +121,6 @@ func StartServer(state types.AppState) {
 			} else {
 				state.AudioPlayer.Resume()
 			}
-			w.WriteHeader(http.StatusOK)
-		} else {
-			log.Error("AudioPlayer not initialized")
-		}
-	})
-
-	http.HandleFunc("/stop", func(w http.ResponseWriter, r *http.Request) {
-		if state.AudioPlayer != nil {
-			state.AudioPlayer.Stop()
 			w.WriteHeader(http.StatusOK)
 		} else {
 			log.Error("AudioPlayer not initialized")

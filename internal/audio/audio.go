@@ -115,7 +115,7 @@ func (ap *AudioPlayer) playNextAudioChunkIfAvailable() {
 func (ap *AudioPlayer) Pause() {
 	ap.mutex.Lock()
 	defer ap.mutex.Unlock()
-	
+
 	if ap.audioController != nil {
 		ap.audioController.Paused = true
 		ap.SetIsPlaying(false)
@@ -171,4 +171,16 @@ func (ap *AudioPlayer) SetIsPlaying(isPlaying bool) {
 	ap.mutex.Lock()
 	defer ap.mutex.Unlock()
 	ap.isAudioPlaying = isPlaying
+}
+
+func (ap *AudioPlayer) Clear() {
+	ap.mutex.Lock()
+	defer ap.mutex.Unlock()
+
+	ap.audioQueue = nil
+	ap.audioController = nil
+	ap.audioFormat = beep.Format{}
+	ap.isAudioPlaying = false
+	close(ap.doneChannel)
+	ap.doneChannel = make(chan struct{})
 }

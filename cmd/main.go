@@ -24,18 +24,19 @@ import (
 func main() {
 
 	// Parse command-line flags
-	flagOllamaModel := flag.String("ollama_model", "", "Ollama model to use")
-	flagOllamaPreface := flag.String("ollama_preface", "", "Preface text for the Ollama prompt")
-	flagOllamaInput := flag.String("ollama_input", "", "input for ollama")
-	flagOllamaPort := flag.Int("ollama_port", 0, "input for ollama")
 	flagPort := flag.Int("port", 8080, "Port number to connect or serve")
-	flagInput := flag.String("input", "", "Input text to play")
 	flagStatus := flag.Bool("status", false, "Request info")
+	flagStop := flag.Bool("stop", false, "Stop audio playback")
+	flagClear := flag.Bool("clear", false, "Clear playback")
 	flagQuit := flag.Bool("quit", false, "Exit application after request")
 	flagPause := flag.Bool("pause", false, "Pause audio playback")
 	flagResume := flag.Bool("resume", false, "Ollama model to use")
 	flagTogglePlayback := flag.Bool("toggle_playback", false, "Ollama model to use")
-	flagStop := flag.Bool("stop", false, "Stop audio playback")
+	flagInput := flag.String("input", "", "Input text to play")
+	flagOllamaModel := flag.String("ollama_model", "", "Ollama model to use")
+	flagOllamaPreface := flag.String("ollama_preface", "", "Preface text for the Ollama prompt")
+	flagOllamaInput := flag.String("ollama_input", "", "input for ollama")
+	flagOllamaPort := flag.Int("ollama_port", 0, "input for ollama")
 	flag.Parse()
 
 	// Retrieve configuration
@@ -58,11 +59,12 @@ func main() {
 		Port:                    *flagPort,
 		ServerAlreadyRunning:    server.CheckServerRunning(*flagPort),
 		StatusRequested:         *flagStatus,
+		StopRequested:           *flagStop,
+		ClearRequested:          *flagClear,
 		QuitRequested:           *flagQuit,
 		PauseRequested:          *flagPause,
 		ResumeRequested:         *flagResume,
 		TogglePlaybackRequested: *flagTogglePlayback,
-		StopRequested:           *flagStop,
 		AzureSpeechInput:        *flagInput,
 		AzureSubscriptionKey:    config.GetStringOrDefault(configData, "AzureSubscriptionKey", ""),
 		AzureRegion:             config.GetStringOrDefault(configData, "AzureRegion", "eastus"),
@@ -106,12 +108,6 @@ func processRequest(state types.AppState) {
 	client := &http.Client{}
 
 	switch {
-	case state.StatusRequested:
-		resp, err := client.Get(fmt.Sprintf("http://localhost:%d/status", state.Port))
-		if err != nil {
-			return
-		}
-		defer resp.Body.Close()
 
 	case state.OllamaInput != "":
 		ollamaReq := ollama.OllamaRequest{
@@ -146,6 +142,27 @@ func processRequest(state types.AppState) {
 		}
 		defer resp.Body.Close()
 
+	case state.StatusRequested:
+		resp, err := client.Get(fmt.Sprintf("http://localhost:%d/status", state.Port))
+		if err != nil {
+			return
+		}
+		defer resp.Body.Close()
+
+	case state.StopRequested:
+		resp, err := client.Post(fmt.Sprintf("http://localhost:%d/stop", state.Port), "", nil)
+		if err != nil {
+			return
+		}
+		defer resp.Body.Close()
+
+	case state.ClearRequested:
+		resp, err := client.Post(fmt.Sprintf("http://localhost:%d/clear", state.Port), "", nil)
+		if err != nil {
+			return
+		}
+		defer resp.Body.Close()
+
 	case state.PauseRequested:
 		resp, err := client.Post(fmt.Sprintf("http://localhost:%d/pause", state.Port), "", nil)
 		if err != nil {
@@ -162,13 +179,6 @@ func processRequest(state types.AppState) {
 
 	case state.TogglePlaybackRequested:
 		resp, err := client.Post(fmt.Sprintf("http://localhost:%d/toggle_playback", state.Port), "", nil)
-		if err != nil {
-			return
-		}
-		defer resp.Body.Close()
-
-	case state.StopRequested:
-		resp, err := client.Post(fmt.Sprintf("http://localhost:%d/stop", state.Port), "", nil)
 		if err != nil {
 			return
 		}
