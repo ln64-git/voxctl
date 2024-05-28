@@ -66,7 +66,7 @@ func StartServer(state types.AppState) {
 
 		go func() {
 			for sentence := range sentenceChan {
-				audioData, err := azure.SynthesizeSpeech(state.AzureSubscriptionKey, state.AzureRegion, sentence, state.VoiceGender, state.VoiceName)
+				audioData, err := azure.SynthesizeSpeech(state.AzureSubscriptionKey, state.AzureRegion, sentence, state.AzureVoiceGender, state.AzureVoiceName)
 				if err != nil {
 					log.Errorf("%v", err)
 					return
@@ -81,6 +81,30 @@ func StartServer(state types.AppState) {
 	http.HandleFunc("/pause", func(w http.ResponseWriter, r *http.Request) {
 		if state.AudioPlayer != nil {
 			state.AudioPlayer.Pause()
+			w.WriteHeader(http.StatusOK)
+		} else {
+			log.Error("AudioPlayer not initialized")
+		}
+	})
+
+	http.HandleFunc("/resume", func(w http.ResponseWriter, r *http.Request) {
+		if state.AudioPlayer != nil {
+			state.AudioPlayer.Resume()
+			w.WriteHeader(http.StatusOK)
+		} else {
+			log.Error("AudioPlayer not initialized")
+		}
+	})
+
+	http.HandleFunc("/toggle_playback", func(w http.ResponseWriter, r *http.Request) {
+		if state.AudioPlayer != nil {
+			if state.AudioPlayer.IsPlaying() {
+				state.AudioPlayer.Pause()
+				state.AudioPlayer.SetIsPlaying(false)
+			} else {
+				state.AudioPlayer.Resume()
+				state.AudioPlayer.SetIsPlaying(true)
+			}
 			w.WriteHeader(http.StatusOK)
 		} else {
 			log.Error("AudioPlayer not initialized")

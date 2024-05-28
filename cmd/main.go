@@ -33,6 +33,8 @@ func main() {
 	flagStatus := flag.Bool("status", false, "Request info")
 	flagQuit := flag.Bool("quit", false, "Exit application after request")
 	flagPause := flag.Bool("pause", false, "Pause audio playback")
+	flagResume := flag.Bool("resume", false, "Ollama model to use")
+	flagTogglePlayback := flag.Bool("toggle_playback", false, "Ollama model to use")
 	flagStop := flag.Bool("stop", false, "Stop audio playback")
 	flag.Parse()
 
@@ -53,21 +55,23 @@ func main() {
 
 	// Populate state from configuration
 	state := types.AppState{
-		Port:                 *flagPort,
-		OllamaPort:           *flagOllamaPort,
-		OllamaModel:          ollamaModel,
-		OllamaPreface:        *flagOllamaPreface,
-		OllamaInput:          *flagOllamaInput,
-		SpeechInput:          *flagInput,
-		StatusRequested:      *flagStatus,
-		QuitRequested:        *flagQuit,
-		PauseRequested:       *flagPause,
-		StopRequested:        *flagStop,
-		AzureSubscriptionKey: config.GetStringOrDefault(configData, "AzureSubscriptionKey", ""),
-		AzureRegion:          config.GetStringOrDefault(configData, "AzureRegion", "eastus"),
-		VoiceGender:          config.GetStringOrDefault(configData, "VoiceGender", "Female"),
-		VoiceName:            config.GetStringOrDefault(configData, "VoiceName", "en-US-JennyNeural"),
-		ServerAlreadyRunning: server.CheckServerRunning(*flagPort),
+		Port:                    *flagPort,
+		ServerAlreadyRunning:    server.CheckServerRunning(*flagPort),
+		StatusRequested:         *flagStatus,
+		QuitRequested:           *flagQuit,
+		PauseRequested:          *flagPause,
+		ResumeRequested:         *flagResume,
+		TogglePlaybackRequested: *flagTogglePlayback,
+		StopRequested:           *flagStop,
+		AzureSpeechInput:        *flagInput,
+		AzureSubscriptionKey:    config.GetStringOrDefault(configData, "AzureSubscriptionKey", ""),
+		AzureRegion:             config.GetStringOrDefault(configData, "AzureRegion", "eastus"),
+		AzureVoiceGender:        config.GetStringOrDefault(configData, "VoiceGender", "Female"),
+		AzureVoiceName:          config.GetStringOrDefault(configData, "VoiceName", "en-US-JennyNeural"),
+		OllamaPort:              *flagOllamaPort,
+		OllamaModel:             ollamaModel,
+		OllamaPreface:           *flagOllamaPreface,
+		OllamaInput:             *flagOllamaInput,
 	}
 
 	// Check if server is already running
@@ -128,12 +132,12 @@ func processRequest(state types.AppState) {
 		}
 		defer resp.Body.Close()
 
-	case state.SpeechInput != "":
+	case state.AzureSpeechInput != "":
 		// log.Info(state.Input)
 		speechReq := speech.SpeechRequest{
-			Text:      state.SpeechInput,
-			Gender:    state.VoiceGender,
-			VoiceName: state.VoiceName,
+			Text:      state.AzureSpeechInput,
+			Gender:    state.AzureVoiceGender,
+			VoiceName: state.AzureVoiceName,
 		}
 		body := bytes.NewBufferString(speechReq.SpeechRequestToJSON())
 		resp, err := client.Post(fmt.Sprintf("http://localhost:%d/input", state.Port), "application/json", body)
@@ -144,6 +148,20 @@ func processRequest(state types.AppState) {
 
 	case state.PauseRequested:
 		resp, err := client.Post(fmt.Sprintf("http://localhost:%d/pause", state.Port), "", nil)
+		if err != nil {
+			return
+		}
+		defer resp.Body.Close()
+
+	case state.ResumeRequested:
+		resp, err := client.Post(fmt.Sprintf("http://localhost:%d/resume", state.Port), "", nil)
+		if err != nil {
+			return
+		}
+		defer resp.Body.Close()
+
+	case state.TogglePlaybackRequested:
+		resp, err := client.Post(fmt.Sprintf("http://localhost:%d/toggle_playback", state.Port), "", nil)
 		if err != nil {
 			return
 		}

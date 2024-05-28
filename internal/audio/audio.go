@@ -159,3 +159,15 @@ func (ap *AudioPlayer) WaitForCompletion() {
 	// Wait on the done channel to signal completion
 	<-ap.doneChannel
 }
+
+func (ap *AudioPlayer) IsPlaying() bool {
+	ap.mutex.Lock()
+	defer ap.mutex.Unlock()
+	return ap.isAudioPlaying
+}
+
+func (ap *AudioPlayer) SetIsPlaying(isPlaying bool) {
+	ap.mutex.Lock()
+	defer ap.mutex.Unlock()
+	ap.isAudioPlaying = isPlaying
+}
