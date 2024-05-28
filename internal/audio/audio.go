@@ -115,9 +115,10 @@ func (ap *AudioPlayer) playNextAudioChunkIfAvailable() {
 func (ap *AudioPlayer) Pause() {
 	ap.mutex.Lock()
 	defer ap.mutex.Unlock()
-
+	
 	if ap.audioController != nil {
 		ap.audioController.Paused = true
+		ap.SetIsPlaying(false)
 	}
 }
 
@@ -127,13 +128,13 @@ func (ap *AudioPlayer) Resume() {
 
 	if ap.audioController != nil {
 		ap.audioController.Paused = false
+		ap.SetIsPlaying(true)
 	}
 }
 
 func (ap *AudioPlayer) Stop() {
 	speaker.Lock()
 	defer speaker.Unlock()
-
 	ap.mutex.Lock()
 	defer ap.mutex.Unlock()
 

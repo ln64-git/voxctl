@@ -100,10 +100,8 @@ func StartServer(state types.AppState) {
 		if state.AudioPlayer != nil {
 			if state.AudioPlayer.IsPlaying() {
 				state.AudioPlayer.Pause()
-				state.AudioPlayer.SetIsPlaying(false)
 			} else {
 				state.AudioPlayer.Resume()
-				state.AudioPlayer.SetIsPlaying(true)
 			}
 			w.WriteHeader(http.StatusOK)
 		} else {
