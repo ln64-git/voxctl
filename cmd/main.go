@@ -129,7 +129,6 @@ func processRequest(state types.AppState) {
 		defer resp.Body.Close()
 
 	case state.AzureSpeechInput != "":
-		// log.Info(state.Input)
 		speechReq := speech.SpeechRequest{
 			Text:      state.AzureSpeechInput,
 			Gender:    state.AzureVoiceGender,

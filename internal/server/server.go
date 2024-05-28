@@ -23,13 +23,14 @@ func StartServer(state types.AppState) {
 	http.HandleFunc("/input", func(w http.ResponseWriter, r *http.Request) {
 		speechReq, err := processSpeechRequest(r)
 		if err != nil {
-			log.Errorf("%v", err)
+			log.Errorf("Failed to process speech request: %v", err)
+			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-
 		err = speech.ProcessSpeech(*speechReq, state.AzureSubscriptionKey, state.AzureRegion, state.AudioPlayer)
 		if err != nil {
-			log.Errorf("%v", err)
+			log.Errorf("Failed to process speech: %v", err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
@@ -39,7 +40,7 @@ func StartServer(state types.AppState) {
 	http.HandleFunc("/ollama", func(w http.ResponseWriter, r *http.Request) {
 		ollamaReq, err := processOllamaRequest(r)
 		if err != nil {
-			log.Errorf("%v", err)
+			log.Errorf("Failed to process Ollama request: %v", err)
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
@@ -48,7 +49,7 @@ func StartServer(state types.AppState) {
 
 		tokenChan, err := ollama.GetOllamaTokenResponse(ollamaReq.Model, finalPrompt)
 		if err != nil {
-			log.Errorf("%v", err)
+			log.Errorf("Failed to get Ollama token response: %v", err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -60,7 +61,7 @@ func StartServer(state types.AppState) {
 			for sentence := range sentenceChan {
 				audioData, err := azure.SynthesizeSpeech(state.AzureSubscriptionKey, state.AzureRegion, sentence, state.AzureVoiceGender, state.AzureVoiceName)
 				if err != nil {
-					log.Errorf("%v", err)
+					log.Errorf("Failed to synthesize speech: %v", err)
 					return
 				}
 				state.AudioPlayer.Play(audioData)
@@ -68,6 +69,7 @@ func StartServer(state types.AppState) {
 		}()
 
 		w.Header().Set("Content-Type", "text/plain")
+		w.WriteHeader(http.StatusOK)
 	})
 
 	http.HandleFunc("/status", func(w http.ResponseWriter, r *http.Request) {
@@ -165,6 +167,9 @@ func processOllamaRequest(r *http.Request) (*ollama.OllamaRequest, error) {
 	}
 	defer r.Body.Close()
 
+	// Log the raw request body
+	log.Infof("Raw request body: %s", string(bodyBytes))
+
 	err = json.Unmarshal(bodyBytes, &req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode request body: %v", err)
@@ -180,6 +185,9 @@ func processSpeechRequest(r *http.Request) (*speech.SpeechRequest, error) {
 		return nil, fmt.Errorf("failed to read request body: %v", err)
 	}
 	defer r.Body.Close()
+
+	// Log the raw request body
+	log.Infof("Raw request body: %s", string(bodyBytes))
 
 	err = json.Unmarshal(bodyBytes, &req)
 	if err != nil {

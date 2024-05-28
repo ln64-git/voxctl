@@ -1,4 +1,3 @@
-// speech/speech.go
 package speech
 
 import (
@@ -17,8 +16,8 @@ type SpeechRequest struct {
 	VoiceName string `json:"voiceName"`
 }
 
-// SanitizeInput removes unwanted characters from a string.
-func SanitizeInput(input string) string {
+// SanitizeText sanitizes and escapes text for JSON compatibility.
+func SanitizeText(input string) string {
 	// Replace newlines, carriage returns, and tabs with a space
 	input = strings.ReplaceAll(input, "\n", " ")
 	input = strings.ReplaceAll(input, "\r", " ")
@@ -27,19 +26,21 @@ func SanitizeInput(input string) string {
 	// Replace multiple spaces with a single space
 	input = strings.Join(strings.Fields(input), " ")
 
+	// Escape double quotes
+	input = strings.ReplaceAll(input, `"`, `\"`)
+
 	return input
 }
 
 // SpeechRequestToJSON converts a SpeechRequest to a JSON string.
 func (r SpeechRequest) SpeechRequestToJSON() string {
-	sanitizedText := SanitizeInput(r.Text)
+	sanitizedText := SanitizeText(r.Text)
 	return fmt.Sprintf(`{"text":"%s","gender":"%s","voiceName":"%s"}`, sanitizedText, r.Gender, r.VoiceName)
 }
 
 // ProcessSpeech processes the speech request by synthesizing and playing the speech.
 func ProcessSpeech(req SpeechRequest, azureSubscriptionKey, azureRegion string, audioPlayer *audio.AudioPlayer) error {
-	sanitizedText := SanitizeInput(req.Text)
-	segments := SegmentedText(sanitizedText)
+	segments := SegmentedText(req.Text)
 	for _, segment := range segments {
 		audioData, err := azure.SynthesizeSpeech(azureSubscriptionKey, azureRegion, segment, req.Gender, req.VoiceName)
 		if err != nil {
