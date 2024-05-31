@@ -17,6 +17,8 @@ type AppState struct {
 	ResumeRequested         bool
 	TogglePlaybackRequested bool
 	QuitRequested           bool
+	SpeakRequest            bool
+	VoskModelPath           string
 	AzureSubscriptionKey    string
 	AzureRegion             string
 	AzureVoiceGender        string

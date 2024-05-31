@@ -18,6 +18,7 @@ import (
 	"github.com/ln64-git/voxctl/internal/server"
 	"github.com/ln64-git/voxctl/internal/speech"
 	"github.com/ln64-git/voxctl/internal/types"
+	"github.com/ln64-git/voxctl/internal/vosk"
 	"github.com/sirupsen/logrus"
 )
 
@@ -25,7 +26,8 @@ func main() {
 
 	// Parse command-line flags
 	flagPort := flag.Int("port", 8080, "Port number to connect or serve")
-	flagUserInput := flag.String("input", "", "User input for speech requests")
+	flagUserInput := flag.String("input", "", "User input for speech or ollama requests")
+	flagSpeak := flag.Bool("speak", false, "Listen for Speech input")
 	flagStatus := flag.Bool("status", false, "Request info")
 	flagStop := flag.Bool("stop", false, "Stop audio playback")
 	flagClear := flag.Bool("clear", false, "Clear playback")
@@ -66,6 +68,8 @@ func main() {
 		PauseRequested:          *flagPause,
 		ResumeRequested:         *flagResume,
 		TogglePlaybackRequested: *flagTogglePlayback,
+		SpeakRequest:            *flagSpeak,
+		VoskModelPath:           config.GetStringOrDefault(configData, "VoskModelPath", ""),
 		AzureSubscriptionKey:    config.GetStringOrDefault(configData, "AzureSubscriptionKey", ""),
 		AzureRegion:             config.GetStringOrDefault(configData, "AzureRegion", "eastus"),
 		AzureVoiceGender:        config.GetStringOrDefault(configData, "VoiceGender", "Female"),
@@ -108,6 +112,21 @@ func processRequest(state types.AppState) {
 	client := &http.Client{}
 
 	switch {
+	case state.SpeakRequest:
+		recognizer, err := vosk.NewSpeechRecognizer(state.VoskModelPath)
+		if err != nil {
+			logrus.Errorf("Failed to initialize Vosk speech recognizer: %v", err)
+			return
+		}
+		resultChan := make(chan string)
+
+		go func() {
+			err := recognizer.Start(resultChan)
+			if err != nil {
+				logrus.Errorf("Error during speech recognition: %v", err)
+			}
+		}()
+		defer recognizer.Stop()
 
 	case state.UserInput != "" && state.OllamaRequest:
 		ollamaReq := ollama.OllamaRequest{
