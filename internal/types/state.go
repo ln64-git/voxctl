@@ -7,6 +7,7 @@ import (
 // State struct to hold program state
 type AppState struct {
 	Port                    int
+	UserInput               string
 	AudioPlayer             *audio.AudioPlayer
 	ServerAlreadyRunning    bool
 	StatusRequested         bool
@@ -16,14 +17,13 @@ type AppState struct {
 	ResumeRequested         bool
 	TogglePlaybackRequested bool
 	QuitRequested           bool
-	AzureSpeechInput        string
+	AzureSpeechRequest      bool
 	AzureSubscriptionKey    string
 	AzureRegion             string
 	AzureVoiceGender        string
 	AzureVoiceName          string
 	OllamaPort              int
 	OllamaModel             string
-	OllamaInput             string
 	OllamaPreface           string
 }
 

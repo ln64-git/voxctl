@@ -25,6 +25,7 @@ func main() {
 
 	// Parse command-line flags
 	flagPort := flag.Int("port", 8080, "Port number to connect or serve")
+	flagUserInput := flag.String("input", "", "User input for speech requests")
 	flagStatus := flag.Bool("status", false, "Request info")
 	flagStop := flag.Bool("stop", false, "Stop audio playback")
 	flagClear := flag.Bool("clear", false, "Clear playback")
@@ -32,10 +33,9 @@ func main() {
 	flagPause := flag.Bool("pause", false, "Pause audio playback")
 	flagResume := flag.Bool("resume", false, "Ollama model to use")
 	flagTogglePlayback := flag.Bool("toggle_playback", false, "Ollama model to use")
-	flagInput := flag.String("input", "", "Input text to play")
+	flagSpeech := flag.Bool("speak", false, "Immediate Speech Request")
 	flagOllamaModel := flag.String("ollama_model", "", "Ollama model to use")
 	flagOllamaPreface := flag.String("ollama_preface", "", "Preface text for the Ollama prompt")
-	flagOllamaInput := flag.String("ollama_input", "", "input for ollama")
 	flagOllamaPort := flag.Int("ollama_port", 0, "input for ollama")
 	flag.Parse()
 
@@ -57,6 +57,7 @@ func main() {
 	// Populate state from configuration
 	state := types.AppState{
 		Port:                    *flagPort,
+		UserInput:               *flagUserInput,
 		ServerAlreadyRunning:    server.CheckServerRunning(*flagPort),
 		StatusRequested:         *flagStatus,
 		StopRequested:           *flagStop,
@@ -65,7 +66,7 @@ func main() {
 		PauseRequested:          *flagPause,
 		ResumeRequested:         *flagResume,
 		TogglePlaybackRequested: *flagTogglePlayback,
-		AzureSpeechInput:        *flagInput,
+		AzureSpeechRequest:      *flagSpeech,
 		AzureSubscriptionKey:    config.GetStringOrDefault(configData, "AzureSubscriptionKey", ""),
 		AzureRegion:             config.GetStringOrDefault(configData, "AzureRegion", "eastus"),
 		AzureVoiceGender:        config.GetStringOrDefault(configData, "VoiceGender", "Female"),
@@ -73,7 +74,6 @@ func main() {
 		OllamaPort:              *flagOllamaPort,
 		OllamaModel:             ollamaModel,
 		OllamaPreface:           *flagOllamaPreface,
-		OllamaInput:             *flagOllamaInput,
 	}
 
 	// Check if server is already running
@@ -109,10 +109,10 @@ func processRequest(state types.AppState) {
 
 	switch {
 
-	case state.OllamaInput != "":
+	case state.UserInput != "":
 		ollamaReq := ollama.OllamaRequest{
 			Model:   state.OllamaModel,
-			Prompt:  state.OllamaInput,
+			Prompt:  state.UserInput,
 			Preface: state.OllamaPreface,
 		}
 		body, err := json.Marshal(ollamaReq)
@@ -128,9 +128,9 @@ func processRequest(state types.AppState) {
 		}
 		defer resp.Body.Close()
 
-	case state.AzureSpeechInput != "":
+	case state.AzureSpeechRequest:
 		speechReq := speech.SpeechRequest{
-			Text:      state.AzureSpeechInput,
+			Text:      state.UserInput,
 			Gender:    state.AzureVoiceGender,
 			VoiceName: state.AzureVoiceName,
 		}
