@@ -33,7 +33,7 @@ func main() {
 	flagPause := flag.Bool("pause", false, "Pause audio playback")
 	flagResume := flag.Bool("resume", false, "Ollama model to use")
 	flagTogglePlayback := flag.Bool("toggle_playback", false, "Ollama model to use")
-	flagSpeech := flag.Bool("speak", false, "Immediate Speech Request")
+	flagOllamaRequest := flag.Bool("ollama", false, "Request ollama querry")
 	flagOllamaModel := flag.String("ollama_model", "", "Ollama model to use")
 	flagOllamaPreface := flag.String("ollama_preface", "", "Preface text for the Ollama prompt")
 	flagOllamaPort := flag.Int("ollama_port", 0, "input for ollama")
@@ -66,11 +66,11 @@ func main() {
 		PauseRequested:          *flagPause,
 		ResumeRequested:         *flagResume,
 		TogglePlaybackRequested: *flagTogglePlayback,
-		AzureSpeechRequest:      *flagSpeech,
 		AzureSubscriptionKey:    config.GetStringOrDefault(configData, "AzureSubscriptionKey", ""),
 		AzureRegion:             config.GetStringOrDefault(configData, "AzureRegion", "eastus"),
 		AzureVoiceGender:        config.GetStringOrDefault(configData, "VoiceGender", "Female"),
 		AzureVoiceName:          config.GetStringOrDefault(configData, "VoiceName", "en-US-JennyNeural"),
+		OllamaRequest:           *flagOllamaRequest,
 		OllamaPort:              *flagOllamaPort,
 		OllamaModel:             ollamaModel,
 		OllamaPreface:           *flagOllamaPreface,
@@ -109,7 +109,7 @@ func processRequest(state types.AppState) {
 
 	switch {
 
-	case state.UserInput != "":
+	case state.UserInput != "" && state.OllamaRequest:
 		ollamaReq := ollama.OllamaRequest{
 			Model:   state.OllamaModel,
 			Prompt:  state.UserInput,
@@ -128,7 +128,7 @@ func processRequest(state types.AppState) {
 		}
 		defer resp.Body.Close()
 
-	case state.AzureSpeechRequest:
+	case state.UserInput != "":
 		speechReq := speech.SpeechRequest{
 			Text:      state.UserInput,
 			Gender:    state.AzureVoiceGender,

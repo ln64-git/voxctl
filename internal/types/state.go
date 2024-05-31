@@ -17,11 +17,11 @@ type AppState struct {
 	ResumeRequested         bool
 	TogglePlaybackRequested bool
 	QuitRequested           bool
-	AzureSpeechRequest      bool
 	AzureSubscriptionKey    string
 	AzureRegion             string
 	AzureVoiceGender        string
 	AzureVoiceName          string
+	OllamaRequest           bool
 	OllamaPort              int
 	OllamaModel             string
 	OllamaPreface           string
