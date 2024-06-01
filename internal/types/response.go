@@ -7,5 +7,6 @@ type OllamaResponse struct {
 	Done      bool   `json:"done"`
 }
 
-
-
+type TextResponse struct {
+	Text string `json:"text"`
+}

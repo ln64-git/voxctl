@@ -2,9 +2,9 @@ package vosk
 
 import (
 	"fmt"
-	"log"
 
 	vosk "github.com/alphacep/vosk-api/go"
+	"github.com/charmbracelet/log"
 	"github.com/gordonklaus/portaudio"
 )
 
@@ -12,6 +12,7 @@ type SpeechRecognizer struct {
 	model      *vosk.VoskModel
 	recognizer *vosk.VoskRecognizer
 	stream     *portaudio.Stream
+	stopChan   chan bool
 }
 
 func NewSpeechRecognizer(modelPath string) (*SpeechRecognizer, error) {
@@ -30,51 +31,47 @@ func NewSpeechRecognizer(modelPath string) (*SpeechRecognizer, error) {
 		return nil, fmt.Errorf("failed to initialize PortAudio: %v", err)
 	}
 
-	stream, err := portaudio.OpenDefaultStream(1, 0, 16000, 0, nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to open PortAudio stream: %v", err)
-	}
-
 	return &SpeechRecognizer{
 		model:      model,
 		recognizer: recognizer,
-		stream:     stream,
+		stopChan:   make(chan bool),
 	}, nil
 }
 
 func (sr *SpeechRecognizer) Start(resultChan chan<- string) error {
-	err := sr.stream.Start()
+	stream, err := portaudio.OpenDefaultStream(1, 0, 16000, 0, sr.audioCallback(resultChan))
+	if err != nil {
+		return fmt.Errorf("failed to open PortAudio stream: %v", err)
+	}
+
+	sr.stream = stream
+
+	err = sr.stream.Start()
 	if err != nil {
 		return fmt.Errorf("failed to start PortAudio stream: %v", err)
 	}
 
-	buffer := make([]int16, 16000)
-	byteBuffer := make([]byte, len(buffer)*2)
+	<-sr.stopChan // Wait until stop is called
+	return nil
+}
 
-	for {
-		err := sr.stream.Read()
-		if err != nil {
-			return fmt.Errorf("failed to read from PortAudio stream: %v", err)
-		}
-
-		// Convert int16 buffer to byte buffer
-		for i, v := range buffer {
+func (sr *SpeechRecognizer) audioCallback(resultChan chan<- string) func([]int16) {
+	return func(input []int16) {
+		byteBuffer := make([]byte, len(input)*2)
+		for i, v := range input {
 			byteBuffer[2*i] = byte(v)
 			byteBuffer[2*i+1] = byte(v >> 8)
 		}
-
 		if sr.recognizer.AcceptWaveform(byteBuffer) > 0 {
 			result := sr.recognizer.Result()
-			log.Println("Result:", result)
+			log.Info("Result:", result)
 			resultChan <- result
-		} else {
-			partial := sr.recognizer.PartialResult()
-			log.Println("Partial Result:", partial)
 		}
 	}
 }
 
 func (sr *SpeechRecognizer) Stop() {
+	sr.stopChan <- true
 	sr.stream.Stop()
 	sr.stream.Close()
 	sr.recognizer.Free()

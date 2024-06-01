@@ -7,18 +7,52 @@ import (
 	"net"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/charmbracelet/log"
 	"github.com/ln64-git/voxctl/external/azure"
 	"github.com/ln64-git/voxctl/external/ollama"
+	"github.com/ln64-git/voxctl/internal/clipboard"
 	"github.com/ln64-git/voxctl/internal/speech"
 	"github.com/ln64-git/voxctl/internal/types"
+	"github.com/sirupsen/logrus"
 )
 
 func StartServer(state types.AppState) {
 	port := state.Port
 	log.Infof("Starting server on port %d", port)
+
+	http.HandleFunc("/start_speech", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		go func() {
+			err := state.SpeechRecognizer.Start(state.SpeechInputChan)
+			if err != nil {
+				logrus.Errorf("Error during speech recognition: %v", err)
+			}
+		}()
+		log.Infof("SpeechInput Starting")
+		state.ToggleSpeechStatus = true
+		w.WriteHeader(http.StatusOK)
+	})
+
+	http.HandleFunc("/stop_speech", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		go func() {
+			state.SpeechRecognizer.Stop()
+			clipboard.CopyToClipboard(state.SpeechInput)
+			state.SpeechInput = ""
+		}()
+		log.Infof("SpeechInput Stopped")
+		state.ToggleSpeechStatus = false
+		w.WriteHeader(http.StatusOK)
+	})
 
 	http.HandleFunc("/input", func(w http.ResponseWriter, r *http.Request) {
 		speechReq, err := processSpeechRequest(r)
@@ -77,7 +111,19 @@ func StartServer(state types.AppState) {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
-		w.WriteHeader(http.StatusOK)
+
+		status := types.AppStatusState{
+			Port:                 state.Port,
+			ServerAlreadyRunning: state.ServerAlreadyRunning,
+			ToggleSpeechStatus:   state.ToggleSpeechStatus, // Assuming this field exists and is being tracked
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		err := json.NewEncoder(w).Encode(status)
+		if err != nil {
+			log.Errorf("Failed to encode status response: %v", err)
+			http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+		}
 	})
 
 	http.HandleFunc("/stop", func(w http.ResponseWriter, r *http.Request) {
@@ -129,10 +175,27 @@ func StartServer(state types.AppState) {
 		}
 	})
 
-	addr := ":" + strconv.Itoa(port)
-	err := http.ListenAndServe(addr, nil)
-	if err != nil {
-		log.Errorf("%v", err)
+	// Start the HTTP server in a separate goroutine
+	go func() {
+		addr := ":" + strconv.Itoa(port)
+		err := http.ListenAndServe(addr, nil)
+		if err != nil {
+			log.Errorf("%v", err)
+		}
+	}()
+
+	// Process speech input from the channel
+	for result := range state.SpeechInputChan {
+		var textResult types.TextResponse
+		err := json.Unmarshal([]byte(result), &textResult)
+		if err != nil {
+			log.Printf("Failed to parse JSON: %v", err)
+			continue
+		}
+		text := strings.TrimSpace(textResult.Text)
+		if text != "" {
+			state.SpeechInput += text
+		}
 	}
 }
 

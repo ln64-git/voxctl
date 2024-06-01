@@ -27,7 +27,9 @@ func main() {
 	// Parse command-line flags
 	flagPort := flag.Int("port", 8080, "Port number to connect or serve")
 	flagUserInput := flag.String("input", "", "User input for speech or ollama requests")
-	flagSpeak := flag.Bool("speak", false, "Listen for Speech input")
+	flagSpeakStart := flag.Bool("speak_start", false, "Start listening for Speech input")
+	flagSpeakStop := flag.Bool("speak_stop", false, "Stop listening for Speech input")
+	flagSpeakToggle := flag.Bool("speak_toggle", false, "Toggle listening for Speech input")
 	flagStatus := flag.Bool("status", false, "Request info")
 	flagStop := flag.Bool("stop", false, "Stop audio playback")
 	flagClear := flag.Bool("clear", false, "Clear playback")
@@ -58,26 +60,36 @@ func main() {
 
 	// Populate state from configuration
 	state := types.AppState{
-		Port:                    *flagPort,
-		UserInput:               *flagUserInput,
-		ServerAlreadyRunning:    server.CheckServerRunning(*flagPort),
-		StatusRequested:         *flagStatus,
-		StopRequested:           *flagStop,
-		ClearRequested:          *flagClear,
-		QuitRequested:           *flagQuit,
-		PauseRequested:          *flagPause,
-		ResumeRequested:         *flagResume,
-		TogglePlaybackRequested: *flagTogglePlayback,
-		SpeakRequest:            *flagSpeak,
-		VoskModelPath:           config.GetStringOrDefault(configData, "VoskModelPath", ""),
-		AzureSubscriptionKey:    config.GetStringOrDefault(configData, "AzureSubscriptionKey", ""),
-		AzureRegion:             config.GetStringOrDefault(configData, "AzureRegion", "eastus"),
-		AzureVoiceGender:        config.GetStringOrDefault(configData, "VoiceGender", "Female"),
-		AzureVoiceName:          config.GetStringOrDefault(configData, "VoiceName", "en-US-JennyNeural"),
-		OllamaRequest:           *flagOllamaRequest,
-		OllamaPort:              *flagOllamaPort,
-		OllamaModel:             ollamaModel,
-		OllamaPreface:           *flagOllamaPreface,
+		Port:                  *flagPort,
+		UserInput:             *flagUserInput,
+		ServerAlreadyRunning:  server.CheckServerRunning(*flagPort),
+		StatusRequest:         *flagStatus,
+		StopRequest:           *flagStop,
+		ClearRequest:          *flagClear,
+		QuitRequest:           *flagQuit,
+		PauseRequest:          *flagPause,
+		ResumeRequest:         *flagResume,
+		TogglePlaybackRequest: *flagTogglePlayback,
+		StartSpeechRequest:    *flagSpeakStart,
+		StopSpeechRequest:     *flagSpeakStop,
+		ToggleSpeechRequest:   *flagSpeakToggle,
+		VoskModelPath:         config.GetStringOrDefault(configData, "VoskModelPath", ""),
+		SpeechInputChan:       make(chan string),
+		AzureSubscriptionKey:  config.GetStringOrDefault(configData, "AzureSubscriptionKey", ""),
+		AzureRegion:           config.GetStringOrDefault(configData, "AzureRegion", "eastus"),
+		AzureVoiceGender:      config.GetStringOrDefault(configData, "VoiceGender", "Female"),
+		AzureVoiceName:        config.GetStringOrDefault(configData, "VoiceName", "en-US-JennyNeural"),
+		OllamaRequest:         *flagOllamaRequest,
+		OllamaPort:            *flagOllamaPort,
+		OllamaModel:           ollamaModel,
+		OllamaPreface:         *flagOllamaPreface,
+	}
+
+	recognizer, err := vosk.NewSpeechRecognizer(state.VoskModelPath)
+	if err != nil {
+		logrus.Errorf("Failed to initialize Vosk speech recognizer: %v", err)
+	} else {
+		state.SpeechRecognizer = *recognizer
 	}
 
 	// Check if server is already running
@@ -96,7 +108,7 @@ func main() {
 	}
 
 	processRequest(state)
-	if state.QuitRequested {
+	if state.QuitRequest {
 		log.Info("Quit flag requested, Program Exiting")
 		return
 	}
@@ -112,21 +124,59 @@ func processRequest(state types.AppState) {
 	client := &http.Client{}
 
 	switch {
-	case state.SpeakRequest:
-		recognizer, err := vosk.NewSpeechRecognizer(state.VoskModelPath)
+	case state.StartSpeechRequest:
+		resp, err := client.Post(fmt.Sprintf("http://localhost:%d/start_speech", state.Port), "", nil)
 		if err != nil {
-			logrus.Errorf("Failed to initialize Vosk speech recognizer: %v", err)
 			return
 		}
-		resultChan := make(chan string)
+		defer resp.Body.Close()
 
-		go func() {
-			err := recognizer.Start(resultChan)
+	case state.StopSpeechRequest:
+		resp, err := client.Post(fmt.Sprintf("http://localhost:%d/stop_speech", state.Port), "", nil)
+		if err != nil {
+			return
+		}
+		defer resp.Body.Close()
+
+	case state.ToggleSpeechRequest:
+		// First, get the current status
+		resp, err := client.Get(fmt.Sprintf("http://localhost:%d/status", state.Port))
+		if err != nil {
+			log.Errorf("Failed to get status: %v", err)
+			return
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			log.Errorf("Unexpected status code: %d", resp.StatusCode)
+			return
+		}
+
+		// Decode the JSON response
+		var status types.AppStatusState
+		err = json.NewDecoder(resp.Body).Decode(&status)
+		if err != nil {
+			log.Errorf("Failed to decode JSON response: %v", err)
+			return
+		}
+
+		// Toggle speech recognition based on the current status
+		if status.ToggleSpeechStatus {
+			// If currently running, stop it
+			resp, err := client.Post(fmt.Sprintf("http://localhost:%d/stop_speech", state.Port), "", nil)
 			if err != nil {
-				logrus.Errorf("Error during speech recognition: %v", err)
+				log.Errorf("Failed to stop speech recognition: %v", err)
+				return
 			}
-		}()
-		defer recognizer.Stop()
+			defer resp.Body.Close()
+		} else {
+			// If not running, start it
+			resp, err := client.Post(fmt.Sprintf("http://localhost:%d/start_speech", state.Port), "", nil)
+			if err != nil {
+				log.Errorf("Failed to start speech recognition: %v", err)
+				return
+			}
+			defer resp.Body.Close()
+		}
 
 	case state.UserInput != "" && state.OllamaRequest:
 		ollamaReq := ollama.OllamaRequest{
@@ -160,42 +210,58 @@ func processRequest(state types.AppState) {
 		}
 		defer resp.Body.Close()
 
-	case state.StatusRequested:
+	case state.StatusRequest:
 		resp, err := client.Get(fmt.Sprintf("http://localhost:%d/status", state.Port))
 		if err != nil {
+			log.Errorf("Failed to get status: %v", err)
 			return
 		}
 		defer resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			log.Errorf("Unexpected status code: %d", resp.StatusCode)
+			return
+		}
 
-	case state.StopRequested:
+		// Decode the JSON response
+		var status types.AppStatusState
+		err = json.NewDecoder(resp.Body).Decode(&status)
+		if err != nil {
+			log.Errorf("Failed to decode JSON response: %v", err)
+			return
+		}
+		if status.ServerAlreadyRunning {
+			fmt.Println("Server is already running")
+		}
+
+	case state.StopRequest:
 		resp, err := client.Post(fmt.Sprintf("http://localhost:%d/stop", state.Port), "", nil)
 		if err != nil {
 			return
 		}
 		defer resp.Body.Close()
 
-	case state.ClearRequested:
+	case state.ClearRequest:
 		resp, err := client.Post(fmt.Sprintf("http://localhost:%d/clear", state.Port), "", nil)
 		if err != nil {
 			return
 		}
 		defer resp.Body.Close()
 
-	case state.PauseRequested:
+	case state.PauseRequest:
 		resp, err := client.Post(fmt.Sprintf("http://localhost:%d/pause", state.Port), "", nil)
 		if err != nil {
 			return
 		}
 		defer resp.Body.Close()
 
-	case state.ResumeRequested:
+	case state.ResumeRequest:
 		resp, err := client.Post(fmt.Sprintf("http://localhost:%d/resume", state.Port), "", nil)
 		if err != nil {
 			return
 		}
 		defer resp.Body.Close()
 
-	case state.TogglePlaybackRequested:
+	case state.TogglePlaybackRequest:
 		resp, err := client.Post(fmt.Sprintf("http://localhost:%d/toggle_playback", state.Port), "", nil)
 		if err != nil {
 			return
