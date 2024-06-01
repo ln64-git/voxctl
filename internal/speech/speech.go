@@ -9,8 +9,8 @@ import (
 	"github.com/ln64-git/voxctl/internal/audio"
 )
 
-// SpeechRequest represents a request to synthesize speech.
-type SpeechRequest struct {
+// AzureSpeechRequest represents a request to synthesize speech.
+type AzureSpeechRequest struct {
 	Text      string `json:"text"`
 	Gender    string `json:"gender"`
 	VoiceName string `json:"voiceName"`
@@ -33,13 +33,13 @@ func SanitizeText(input string) string {
 }
 
 // SpeechRequestToJSON converts a SpeechRequest to a JSON string.
-func (r SpeechRequest) SpeechRequestToJSON() string {
+func (r AzureSpeechRequest) SpeechRequestToJSON() string {
 	sanitizedText := SanitizeText(r.Text)
 	return fmt.Sprintf(`{"text":"%s","gender":"%s","voiceName":"%s"}`, sanitizedText, r.Gender, r.VoiceName)
 }
 
 // ProcessSpeech processes the speech request by synthesizing and playing the speech.
-func ProcessSpeech(req SpeechRequest, azureSubscriptionKey, azureRegion string, audioPlayer *audio.AudioPlayer) error {
+func ProcessSpeech(req AzureSpeechRequest, azureSubscriptionKey, azureRegion string, audioPlayer *audio.AudioPlayer) error {
 	segments := SegmentedText(req.Text)
 	for _, segment := range segments {
 		audioData, err := azure.SynthesizeSpeech(azureSubscriptionKey, azureRegion, segment, req.Gender, req.VoiceName)

@@ -158,7 +158,7 @@ func processRequest(state types.AppState) {
 		processOllamaRequest(client, state)
 
 	case state.UserInput != "":
-		processSpeechRequest(client, state)
+		processAzureRequest(client, state)
 
 	case state.StatusRequest:
 		processStatusRequest(client, state)
@@ -235,8 +235,8 @@ func processOllamaRequest(client *http.Client, state types.AppState) {
 	defer resp.Body.Close()
 }
 
-func processSpeechRequest(client *http.Client, state types.AppState) {
-	speechReq := speech.SpeechRequest{
+func processAzureRequest(client *http.Client, state types.AppState) {
+	speechReq := speech.AzureSpeechRequest{
 		Text:      state.UserInput,
 		Gender:    state.AzureVoiceGender,
 		VoiceName: state.AzureVoiceName,

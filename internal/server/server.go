@@ -241,8 +241,8 @@ func processOllamaRequest(r *http.Request) (*ollama.OllamaRequest, error) {
 	return &req, nil
 }
 
-func processSpeechRequest(r *http.Request) (*speech.SpeechRequest, error) {
-	var req speech.SpeechRequest
+func processSpeechRequest(r *http.Request) (*speech.AzureSpeechRequest, error) {
+	var req speech.AzureSpeechRequest
 	bodyBytes, err := io.ReadAll(r.Body)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read request body: %v", err)
