@@ -23,8 +23,8 @@ type AppState struct {
 	ToggleSpeechRequest   bool
 	ToggleSpeechStatus    bool
 	VoskModelPath         string
-	SpeechRecognizer      vosk.SpeechRecognizer
 	SpeechInputChan       chan string
+	SpeechRecognizer      vosk.SpeechRecognizer
 	SpeechInput           string
 	AzureSubscriptionKey  string
 	AzureRegion           string

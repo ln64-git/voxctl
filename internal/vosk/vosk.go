@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	vosk "github.com/alphacep/vosk-api/go"
-	"github.com/charmbracelet/log"
 	"github.com/gordonklaus/portaudio"
 )
 
@@ -64,7 +63,6 @@ func (sr *SpeechRecognizer) audioCallback(resultChan chan<- string) func([]int16
 		}
 		if sr.recognizer.AcceptWaveform(byteBuffer) > 0 {
 			result := sr.recognizer.Result()
-			log.Info("Result:", result)
 			resultChan <- result
 		}
 	}
