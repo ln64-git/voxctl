@@ -64,9 +64,6 @@ func (sr *SpeechRecognizer) audioCallback(resultChan chan<- string) func([]int16
 		if sr.recognizer.AcceptWaveform(byteBuffer) > 0 {
 			result := sr.recognizer.Result()
 			resultChan <- result
-		} else {
-			partialResult := sr.recognizer.PartialResult()
-			resultChan <- partialResult
 		}
 	}
 }
