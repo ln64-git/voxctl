@@ -213,6 +213,7 @@ func startHTTPServer(port int) {
 
 func processSpeechInput(state *types.AppState) {
 	for result := range state.SpeechInputChan {
+		log.Info("Received input from Vosk: ")
 		log.Info(result)
 
 		var textResult types.TextResponse

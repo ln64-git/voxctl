@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	vosk "github.com/alphacep/vosk-api/go"
+	"github.com/charmbracelet/log"
 	"github.com/gordonklaus/portaudio"
 )
 
@@ -50,7 +51,15 @@ func (sr *SpeechRecognizer) Start(resultChan chan<- string) error {
 		return fmt.Errorf("failed to start PortAudio stream: %v", err)
 	}
 
-	<-sr.stopChan // Wait until stop is called
+	go func() {
+		<-sr.stopChan // Wait until stop is called
+		sr.stream.Stop()
+		sr.stream.Close()
+		sr.recognizer.Free()
+		sr.model.Free()
+		portaudio.Terminate()
+	}()
+
 	return nil
 }
 
@@ -63,16 +72,16 @@ func (sr *SpeechRecognizer) audioCallback(resultChan chan<- string) func([]int16
 		}
 		if sr.recognizer.AcceptWaveform(byteBuffer) > 0 {
 			result := sr.recognizer.Result()
+			log.Info("Final Result:")
+			log.Info(result)
 			resultChan <- result
+			// } else {
+			// 	partialResult := sr.recognizer.PartialResult()
+			// 	resultChan <- partialResult
 		}
 	}
 }
 
 func (sr *SpeechRecognizer) Stop() {
 	sr.stopChan <- true
-	sr.stream.Stop()
-	sr.stream.Close()
-	sr.recognizer.Free()
-	sr.model.Free()
-	portaudio.Terminate()
 }
