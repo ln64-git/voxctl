@@ -49,6 +49,7 @@ func parseFlags() *types.Flags {
 	flags := &types.Flags{
 		Port:           flag.Int("port", 8080, "Port number to connect or serve"),
 		UserInput:      flag.String("input", "", "User input for speech or ollama requests"),
+		Convo:          flag.Bool("convo", false, "Start Conversation Mode"),
 		SpeakStart:     flag.Bool("speak_start", false, "Start listening for Speech input"),
 		SpeakStop:      flag.Bool("speak_stop", false, "Stop listening for Speech input"),
 		SpeakToggle:    flag.Bool("speak_toggle", false, "Toggle listening for Speech input"),
@@ -86,6 +87,7 @@ func initializeAppState(flags *types.Flags, configData map[string]interface{}) t
 		Port:                  *flags.Port,
 		UserInput:             *flags.UserInput,
 		ServerAlreadyRunning:  server.CheckServerRunning(*flags.Port),
+		ConversationMode:      *flags.Convo,
 		StatusRequest:         *flags.Status,
 		StopRequest:           *flags.Stop,
 		ClearRequest:          *flags.Clear,

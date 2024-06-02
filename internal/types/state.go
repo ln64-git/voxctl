@@ -11,6 +11,7 @@ type AppState struct {
 	UserInput             string
 	AudioPlayer           *audio.AudioPlayer
 	ServerAlreadyRunning  bool
+	ConversationMode      bool
 	StatusRequest         bool
 	StopRequest           bool
 	ClearRequest          bool

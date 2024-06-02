@@ -66,8 +66,17 @@ func StartServer(state types.AppState) {
 	// Start the HTTP server in a separate goroutine
 	go startHTTPServer(port)
 
-	// Process speech input from the channel
-	processSpeechInput(state)
+	// If Conversation Mode then Start Speech Recognition
+	if state.ConversationMode {
+		log.Info("Conversation Mode Enabled: Starting Speech Recognition")
+		err := state.SpeechRecognizer.Start(state.SpeechInputChan)
+		if err != nil {
+			logrus.Errorf("Error starting speech recognizer: %v", err)
+		}
+	}
+
+	// Process speech input from the channel in a separate goroutine
+	go processSpeechInput(&state)
 }
 
 func handleStartSpeech(w http.ResponseWriter, r *http.Request, state *types.AppState) {
@@ -202,8 +211,10 @@ func startHTTPServer(port int) {
 	}
 }
 
-func processSpeechInput(state types.AppState) {
+func processSpeechInput(state *types.AppState) {
 	for result := range state.SpeechInputChan {
+		log.Info(result)
+
 		var textResult types.TextResponse
 		err := json.Unmarshal([]byte(result), &textResult)
 		if err != nil {
@@ -212,9 +223,49 @@ func processSpeechInput(state types.AppState) {
 		}
 		text := strings.TrimSpace(textResult.Text)
 		if text != "" {
-			state.SpeechInput += text
+			log.Infof("SpeechInputChan: %s", text)
+
+			state.SpeechInput += text + " "
+			// Handle conversation mode
+			if state.ConversationMode && len(strings.Fields(state.SpeechInput)) >= 3 {
+				handleConversation(state)
+			}
 		}
 	}
+}
+
+func handleConversation(state *types.AppState) {
+	log.Info("handleConversation Called")
+	go func() {
+		ollamaReq := ollama.OllamaRequest{
+			Model:   state.OllamaModel,
+			Prompt:  state.SpeechInput,
+			Preface: state.OllamaPreface,
+		}
+		body, err := json.Marshal(ollamaReq)
+		if err != nil {
+			logrus.Errorf("Failed to marshal Ollama request: %v", err)
+			return
+		}
+
+		req, err := http.NewRequest("POST", "http://localhost:"+strconv.Itoa(state.Port)+"/ollama", strings.NewReader(string(body)))
+		if err != nil {
+			logrus.Errorf("Error creating request: %v", err)
+			return
+		}
+		req.Header.Set("Content-Type", "application/json")
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			logrus.Errorf("Error making request: %v", err)
+			return
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			logrus.Errorf("Request failed with status: %v", resp.Status)
+			return
+		}
+		state.SpeechInput = ""
+	}()
 }
 
 // CheckServerRunning checks if the server is already running on the specified port.

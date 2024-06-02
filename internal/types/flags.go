@@ -4,6 +4,7 @@ package types
 type Flags struct {
 	Port           *int    // Port number to connect or serve
 	UserInput      *string // User input for speech or Ollama requests
+	Convo          *bool   // User input for speech or Ollama requests
 	SpeakStart     *bool   // Start listening for Speech input
 	SpeakStop      *bool   // Stop listening for Speech input
 	SpeakToggle    *bool   // Toggle listening for Speech input
