@@ -102,8 +102,8 @@ func initializeAppState(flags *types.Flags, configData map[string]interface{}) t
 		AzureVoiceGender:      config.GetStringOrDefault(configData, "VoiceGender", "Female"),
 		AzureVoiceName:        config.GetStringOrDefault(configData, "VoiceName", "en-US-JennyNeural"),
 		ChatText:              *flags.ChatText,
-		OllamaModel:           config.GetStringOrDefault(configData, "OllamaModel", "en-US-JennyNeural"),
-		OllamaPreface:         config.GetStringOrDefault(configData, "OllamaPreface", "en-US-JennyNeural"),
+		OllamaModel:           config.GetStringOrDefault(configData, "OllamaModel", "llama3"),
+		OllamaPreface:         config.GetStringOrDefault(configData, "OllamaPreface", ""),
 	}
 }
 
@@ -153,7 +153,7 @@ func processRequest(state types.AppState) {
 		toggleSpeechRecognition(client, state)
 
 	case state.ChatText != "":
-		processOllamaRequest(client, state)
+		processChatRequest(client, state)
 
 	case state.ReadText != "":
 		processAzureRequest(client, state)
@@ -213,7 +213,7 @@ func toggleSpeechRecognition(client *http.Client, state types.AppState) {
 	}
 }
 
-func processOllamaRequest(client *http.Client, state types.AppState) {
+func processChatRequest(client *http.Client, state types.AppState) {
 	ollamaReq := ollama.OllamaRequest{
 		Model:   state.OllamaModel,
 		Prompt:  state.ChatText,
@@ -225,7 +225,10 @@ func processOllamaRequest(client *http.Client, state types.AppState) {
 		return
 	}
 
-	resp, err := client.Post(fmt.Sprintf("http://localhost:%d/ollama", state.Port), "text/plain", bytes.NewBuffer(body))
+	log.Info("processChatRequest - INTI")
+	log.Info(ollamaReq)
+
+	resp, err := client.Post(fmt.Sprintf("http://localhost:%d/chat", state.Port), "text/plain", bytes.NewBuffer(body))
 	if err != nil {
 		logrus.Errorf("Failed to send Ollama request: %v", err)
 		return

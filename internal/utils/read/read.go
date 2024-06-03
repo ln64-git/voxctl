@@ -1,9 +1,7 @@
 package read
 
 import (
-	"encoding/json"
 	"fmt"
-	"net/http"
 	"strings"
 
 	"github.com/charmbracelet/log"
@@ -31,30 +29,6 @@ func ReadText(req AzureSpeechRequest, azureSubscriptionKey, azureRegion string, 
 		log.Infof("Speech processed: %s", segment) // Example log message
 	}
 	return nil
-}
-
-func ProcessAzureRequest(r *http.Request) (*AzureSpeechRequest, error) {
-	var speechReq AzureSpeechRequest
-	decoder := json.NewDecoder(r.Body)
-	err := decoder.Decode(&speechReq)
-	if err != nil {
-		return nil, err
-	}
-	return &speechReq, nil
-}
-
-func SegmentTextFromChannel(tokenChan <-chan string, sentenceChan chan<- string) {
-	defer close(sentenceChan)
-	var builder strings.Builder
-
-	for token := range tokenChan {
-		builder.WriteString(token)
-		if strings.ContainsAny(token, ",.!?") {
-			sentence := builder.String()
-			sentenceChan <- sentence
-			builder.Reset()
-		}
-	}
 }
 
 // segmentText splits text into segments based on punctuation.

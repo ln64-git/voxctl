@@ -19,12 +19,16 @@ func HandleConversation(state *types.AppState) {
 	switch strings.TrimSpace(state.SpeakText) {
 	case "stop":
 		state.AudioPlayer.Stop()
+		state.SpeakText = ""
 	case "pause":
 		state.AudioPlayer.Pause()
+		state.SpeakText = ""
 	case "resume":
 		state.AudioPlayer.Resume()
+		state.SpeakText = ""
 	case "clear":
 		state.AudioPlayer.Clear()
+		state.SpeakText = ""
 	default:
 		go func() {
 			ollamaReq := ollama.OllamaRequest{
@@ -38,7 +42,7 @@ func HandleConversation(state *types.AppState) {
 				return
 			}
 
-			req, err := http.NewRequest("POST", "http://localhost:"+strconv.Itoa(state.Port)+"/ollama", strings.NewReader(string(body)))
+			req, err := http.NewRequest("POST", "http://localhost:"+strconv.Itoa(state.Port)+"/chat", strings.NewReader(string(body)))
 			if err != nil {
 				logrus.Errorf("Error creating request: %v", err)
 				return

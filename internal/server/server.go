@@ -27,8 +27,8 @@ func StartServer(state types.AppState) {
 		handlers.HandleSpeakStop(w, r, &state)
 	})
 
-	http.HandleFunc("/ollama", func(w http.ResponseWriter, r *http.Request) {
-		handlers.HandleOllamaRequest(w, r, &state)
+	http.HandleFunc("/chat", func(w http.ResponseWriter, r *http.Request) {
+		handlers.HandleChatRequest(w, r, &state)
 	})
 
 	http.HandleFunc("/status", func(w http.ResponseWriter, r *http.Request) {

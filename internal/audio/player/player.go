@@ -135,8 +135,6 @@ func (ap *AudioPlayer) Resume() {
 	ap.mutex.Lock()
 	defer ap.mutex.Unlock()
 
-	log.Info("RESUME CALLED")
-
 	if ap.audioController != nil {
 		speaker.Lock()
 		ap.audioController.Paused = false
