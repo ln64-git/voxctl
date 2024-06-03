@@ -9,30 +9,38 @@ import (
 	"time"
 
 	"github.com/charmbracelet/log"
+	"github.com/ln64-git/voxctl/internal/audio/vosk"
 	"github.com/ln64-git/voxctl/internal/handlers"
 	"github.com/ln64-git/voxctl/internal/types"
 	"github.com/ln64-git/voxctl/internal/utils/speak"
 	"github.com/sirupsen/logrus"
 )
 
-func StartServer(state types.AppState) {
+func StartServer(state *types.AppState) {
 	port := state.Port
 	log.Infof("Starting server on port %d", port)
 
+	// Initialize Vosk speech recognizer
+	initializeSpeechRecognizer(*&state)
+
 	http.HandleFunc("/speak_start", func(w http.ResponseWriter, r *http.Request) {
-		handlers.HandleSpeakStart(w, r, &state)
+		handlers.HandleSpeakStart(w, r, *&state)
 	})
 
 	http.HandleFunc("/speak_stop", func(w http.ResponseWriter, r *http.Request) {
-		handlers.HandleSpeakStop(w, r, &state)
+		handlers.HandleSpeakStop(w, r, *&state)
+	})
+
+	http.HandleFunc("/speak_toggle", func(w http.ResponseWriter, r *http.Request) {
+		handlers.HandleSpeakToggle(w, r, *&state)
 	})
 
 	http.HandleFunc("/chat", func(w http.ResponseWriter, r *http.Request) {
-		handlers.HandleChatRequest(w, r, &state)
+		handlers.HandleChatRequest(w, r, *&state)
 	})
 
 	http.HandleFunc("/status", func(w http.ResponseWriter, r *http.Request) {
-		handleStatus(w, r, &state)
+		handleStatus(w, r, *&state)
 	})
 
 	http.HandleFunc("/stop", func(w http.ResponseWriter, r *http.Request) {
@@ -52,7 +60,7 @@ func StartServer(state types.AppState) {
 	})
 
 	http.HandleFunc("/toggle_playback", func(w http.ResponseWriter, r *http.Request) {
-		handleTogglePlayback(w, r, &state)
+		handleTogglePlayback(w, r, *&state)
 	})
 
 	// Start the HTTP server in a separate goroutine
@@ -62,12 +70,13 @@ func StartServer(state types.AppState) {
 	if state.ConversationMode {
 		log.Info("Conversation Mode Enabled: Starting Speech Recognition")
 		err := state.SpeechRecognizer.Start(state.SpeakTextChan)
+		state.SpeakStatus = true
 		if err != nil {
 			logrus.Errorf("Error starting speech recognizer: %v", err)
 		}
 	}
 
-	go speak.ProcessSpeakText(&state)
+	go speak.ProcessSpeakText(*&state)
 }
 
 func handleAudioRequest(w http.ResponseWriter, r *http.Request, controlFunc func()) {
@@ -100,7 +109,7 @@ func handleStatus(w http.ResponseWriter, r *http.Request, state *types.AppState)
 	status := types.AppStatusState{
 		Port:                 state.Port,
 		ServerAlreadyRunning: state.ServerAlreadyRunning,
-		ToggleSpeechStatus:   state.ToggleSpeechStatus,
+		SpeakStatus:          state.SpeakStatus,
 	}
 	w.Header().Set("Content-Type", "application/json")
 	err := json.NewEncoder(w).Encode(status)
@@ -139,4 +148,12 @@ func ConnectToServer(port int) (*http.Response, error) {
 		return resp, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
 	}
 	return resp, nil
+}
+func initializeSpeechRecognizer(state *types.AppState) {
+	recognizer, err := vosk.NewSpeechRecognizer(state.VoskModelPath)
+	if err != nil {
+		logrus.Errorf("Failed to initialize Vosk speech recognizer: %v", err)
+	} else {
+		state.SpeechRecognizer = recognizer // Assigning the pointer directly
+	}
 }

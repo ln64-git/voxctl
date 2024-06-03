@@ -21,7 +21,7 @@ func HandleSpeakStart(w http.ResponseWriter, r *http.Request, state *types.AppSt
 		}
 	}()
 	log.Infof("SpeechInput Starting")
-	state.ToggleSpeechStatus = true
+	state.SpeakStatus = true
 	w.WriteHeader(http.StatusOK)
 }
 
@@ -36,6 +36,18 @@ func HandleSpeakStop(w http.ResponseWriter, r *http.Request, state *types.AppSta
 		state.SpeakText = ""
 	}()
 	log.Infof("SpeechInput Stopped")
-	state.ToggleSpeechStatus = false
+	state.SpeakStatus = false
 	w.WriteHeader(http.StatusOK)
+}
+
+func HandleSpeakToggle(w http.ResponseWriter, r *http.Request, state *types.AppState) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	if state.SpeakStatus {
+		HandleSpeakStop(w, r, state)
+	} else {
+		HandleSpeakStart(w, r, state)
+	}
 }

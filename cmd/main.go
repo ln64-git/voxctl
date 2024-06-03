@@ -14,7 +14,6 @@ import (
 	"github.com/charmbracelet/log"
 	"github.com/ln64-git/voxctl/external/ollama"
 	"github.com/ln64-git/voxctl/internal/audio/player"
-	"github.com/ln64-git/voxctl/internal/audio/vosk"
 	"github.com/ln64-git/voxctl/internal/config"
 	"github.com/ln64-git/voxctl/internal/server"
 	"github.com/ln64-git/voxctl/internal/types"
@@ -32,14 +31,11 @@ func main() {
 	// Initialize application state
 	state := initializeAppState(flags, configData)
 
-	// Initialize Vosk speech recognizer
-	initializeSpeechRecognizer(&state)
-
 	// Check and start server
 	handleServerState(&state)
 
 	// Process user request
-	processRequest(state)
+	processRequest(&state)
 
 	// Handle graceful shutdown
 	handleShutdown()
@@ -92,9 +88,9 @@ func initializeAppState(flags *types.Flags, configData map[string]interface{}) t
 		PauseRequest:          *flags.Pause,
 		ResumeRequest:         *flags.Resume,
 		TogglePlaybackRequest: *flags.TogglePlayback,
-		StartSpeechRequest:    *flags.SpeakStart,
-		StopSpeechRequest:     *flags.SpeakStop,
-		ToggleSpeechRequest:   *flags.SpeakToggle,
+		SpeakStartRequest:     *flags.SpeakStart,
+		SpeakStopRequest:      *flags.SpeakStop,
+		SpeakToggleRequest:    *flags.SpeakToggle,
 		SpeakTextChan:         make(chan string),
 		VoskModelPath:         config.GetStringOrDefault(configData, "VoskModelPath", ""),
 		AzureSubscriptionKey:  config.GetStringOrDefault(configData, "AzureSubscriptionKey", ""),
@@ -107,19 +103,10 @@ func initializeAppState(flags *types.Flags, configData map[string]interface{}) t
 	}
 }
 
-func initializeSpeechRecognizer(state *types.AppState) {
-	recognizer, err := vosk.NewSpeechRecognizer(state.VoskModelPath)
-	if err != nil {
-		logrus.Errorf("Failed to initialize Vosk speech recognizer: %v", err)
-	} else {
-		state.SpeechRecognizer = *recognizer
-	}
-}
-
 func handleServerState(state *types.AppState) {
 	if !server.CheckServerRunning(state.Port) {
 		state.AudioPlayer = player.NewAudioPlayer()
-		go server.StartServer(*state)
+		go server.StartServer(state)
 		time.Sleep(35 * time.Millisecond)
 	} else {
 		resp, err := server.ConnectToServer(state.Port)
@@ -139,18 +126,18 @@ func handleShutdown() {
 	log.Infof("Program Exiting")
 }
 
-func processRequest(state types.AppState) {
+func processRequest(state *types.AppState) {
 	client := &http.Client{}
 
 	switch {
-	case state.StartSpeechRequest:
+	case state.SpeakStartRequest:
 		sendPostRequest(client, state.Port, "/speak_start")
 
-	case state.StopSpeechRequest:
+	case state.SpeakStopRequest:
 		sendPostRequest(client, state.Port, "/speak_stop")
 
-	case state.ToggleSpeechRequest:
-		toggleSpeechRecognition(client, state)
+	case state.SpeakToggleRequest:
+		sendPostRequest(client, state.Port, "/speak_toggle")
 
 	case state.ChatText != "":
 		processChatRequest(client, state)
@@ -187,7 +174,7 @@ func sendPostRequest(client *http.Client, port int, endpoint string) {
 	defer resp.Body.Close()
 }
 
-func toggleSpeechRecognition(client *http.Client, state types.AppState) {
+func processSpeakToggle(client *http.Client, state *types.AppState) {
 	resp, err := client.Get(fmt.Sprintf("http://localhost:%d/status", state.Port))
 	if err != nil {
 		log.Errorf("Failed to get status: %v", err)
@@ -206,14 +193,15 @@ func toggleSpeechRecognition(client *http.Client, state types.AppState) {
 		return
 	}
 
-	if status.ToggleSpeechStatus {
-		sendPostRequest(client, state.Port, "/stop_speech")
-	} else {
-		sendPostRequest(client, state.Port, "/start_speech")
-	}
+	log.Info(status.SpeakStatus)
+	// if status.SpeakStatus {
+	// 	sendPostRequest(client, state.Port, "/speak_stop")
+	// } else {
+	// 	sendPostRequest(client, state.Port, "/speak_start")
+	// }
 }
 
-func processChatRequest(client *http.Client, state types.AppState) {
+func processChatRequest(client *http.Client, state *types.AppState) {
 	ollamaReq := ollama.OllamaRequest{
 		Model:   state.OllamaModel,
 		Prompt:  state.ChatText,
@@ -236,7 +224,7 @@ func processChatRequest(client *http.Client, state types.AppState) {
 	defer resp.Body.Close()
 }
 
-func processAzureRequest(client *http.Client, state types.AppState) {
+func processAzureRequest(client *http.Client, state *types.AppState) {
 	speechReq := read.AzureSpeechRequest{
 		Text:      state.ReadText,
 		Gender:    state.AzureVoiceGender,
@@ -250,7 +238,7 @@ func processAzureRequest(client *http.Client, state types.AppState) {
 	defer resp.Body.Close()
 }
 
-func processStatusRequest(client *http.Client, state types.AppState) {
+func processStatusRequest(client *http.Client, state *types.AppState) {
 	resp, err := client.Get(fmt.Sprintf("http://localhost:%d/status", state.Port))
 	if err != nil {
 		log.Errorf("Failed to get status: %v", err)

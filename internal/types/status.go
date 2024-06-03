@@ -4,5 +4,5 @@ package types
 type AppStatusState struct {
 	Port                 int  `json:"port"`
 	ServerAlreadyRunning bool `json:"serverAlreadyRunning"`
-	ToggleSpeechStatus   bool `json:"toggleSpeechStatus"`
+	SpeakStatus          bool `json:"toggleSpeechStatus"`
 }

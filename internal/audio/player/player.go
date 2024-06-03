@@ -143,24 +143,19 @@ func (ap *AudioPlayer) Resume() {
 }
 
 func (ap *AudioPlayer) Stop() {
-	speaker.Lock()
-	defer speaker.Unlock()
 	ap.mutex.Lock()
 	defer ap.mutex.Unlock()
 
+	// Silence the audio controller
 	if ap.audioController != nil {
-		if closer, ok := ap.audioController.Streamer.(io.Closer); ok {
-			closer.Close()
-		}
-		select {
-		case <-ap.doneChannel:
-		default:
-			ap.doneChannel <- struct{}{}
-		}
-		ap.isAudioPlaying = false
-		ap.audioQueue = nil
-		ap.initialized = false
+		speaker.Lock()
+		ap.audioController.Paused = true
+		speaker.Unlock()
 	}
+
+	// Clear the audio queue and reset state
+	ap.audioQueue = nil
+	ap.isAudioPlaying = false
 }
 
 func (ap *AudioPlayer) WaitForCompletion() {

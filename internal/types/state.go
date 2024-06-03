@@ -19,13 +19,13 @@ type AppState struct {
 	ResumeRequest         bool
 	TogglePlaybackRequest bool
 	QuitRequest           bool
-	StartSpeechRequest    bool
-	StopSpeechRequest     bool
-	ToggleSpeechRequest   bool
-	ToggleSpeechStatus    bool
+	SpeakStartRequest     bool
+	SpeakStopRequest      bool
+	SpeakToggleRequest    bool
+	SpeakStatus           bool
 	VoskModelPath         string
 	SpeakTextChan         chan string
-	SpeechRecognizer      vosk.SpeechRecognizer
+	SpeechRecognizer      *vosk.SpeechRecognizer
 	SpeakText             string
 	AzureSubscriptionKey  string
 	AzureRegion           string
