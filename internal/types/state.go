@@ -31,7 +31,7 @@ type AppState struct {
 	AzureRegion           string
 	AzureVoiceGender      string
 	AzureVoiceName        string
-	OllamaRequest         bool
+	ChatText              string
 	OllamaPort            int
 	OllamaModel           string
 	OllamaPreface         string

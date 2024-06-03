@@ -60,6 +60,7 @@ func parseFlags() *types.Flags {
 		Pause:          flag.Bool("pause", false, "Pause audio playback"),
 		Resume:         flag.Bool("resume", false, "Resume audio playback"),
 		TogglePlayback: flag.Bool("toggle_playback", false, "Toggle audio playback"),
+		ChatText:       flag.String("chat", "", "Chat with text"),
 	}
 	flag.Parse()
 	// If no flag arguments are provided, set Convo to true
@@ -100,6 +101,7 @@ func initializeAppState(flags *types.Flags, configData map[string]interface{}) t
 		AzureRegion:           config.GetStringOrDefault(configData, "AzureRegion", "eastus"),
 		AzureVoiceGender:      config.GetStringOrDefault(configData, "VoiceGender", "Female"),
 		AzureVoiceName:        config.GetStringOrDefault(configData, "VoiceName", "en-US-JennyNeural"),
+		ChatText:              *flags.ChatText,
 		OllamaModel:           config.GetStringOrDefault(configData, "OllamaModel", "en-US-JennyNeural"),
 		OllamaPreface:         config.GetStringOrDefault(configData, "OllamaPreface", "en-US-JennyNeural"),
 	}
@@ -150,7 +152,7 @@ func processRequest(state types.AppState) {
 	case state.ToggleSpeechRequest:
 		toggleSpeechRecognition(client, state)
 
-	case state.ReadText != "" && state.OllamaRequest:
+	case state.ChatText != "":
 		processOllamaRequest(client, state)
 
 	case state.ReadText != "":
@@ -214,7 +216,7 @@ func toggleSpeechRecognition(client *http.Client, state types.AppState) {
 func processOllamaRequest(client *http.Client, state types.AppState) {
 	ollamaReq := ollama.OllamaRequest{
 		Model:   state.OllamaModel,
-		Prompt:  state.ReadText,
+		Prompt:  state.ChatText,
 		Preface: state.OllamaPreface,
 	}
 	body, err := json.Marshal(ollamaReq)

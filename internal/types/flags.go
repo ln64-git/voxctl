@@ -15,7 +15,7 @@ type Flags struct {
 	Pause          *bool   // Pause audio playback
 	Resume         *bool   // Resume audio playback
 	TogglePlayback *bool   // Toggle audio playback
-	OllamaRequest  *bool   // Request Ollama query
+	ChatText       *string // Request Ollama query
 	OllamaModel    *string // Ollama model to use
 	OllamaPreface  *string // Preface text for the Ollama prompt
 	OllamaPort     *int    // Input for Ollama
