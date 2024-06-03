@@ -13,12 +13,12 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/ln64-git/voxctl/external/ollama"
-	"github.com/ln64-git/voxctl/internal/audio"
+	"github.com/ln64-git/voxctl/internal/audio/player"
+	"github.com/ln64-git/voxctl/internal/audio/vosk"
 	"github.com/ln64-git/voxctl/internal/config"
 	"github.com/ln64-git/voxctl/internal/server"
-	"github.com/ln64-git/voxctl/internal/speech"
 	"github.com/ln64-git/voxctl/internal/types"
-	"github.com/ln64-git/voxctl/internal/vosk"
+	"github.com/ln64-git/voxctl/internal/utils/read"
 	"github.com/sirupsen/logrus"
 )
 
@@ -48,7 +48,7 @@ func main() {
 func parseFlags() *types.Flags {
 	flags := &types.Flags{
 		Port:           flag.Int("port", 8080, "Port number to connect or serve"),
-		UserInput:      flag.String("input", "", "User input for speech or ollama requests"),
+		ReadText:       flag.String("read_text", "", "User input for speech or ollama requests"),
 		Convo:          flag.Bool("convo", false, "Start Conversation Mode"),
 		SpeakStart:     flag.Bool("speak_start", false, "Start listening for Speech input"),
 		SpeakStop:      flag.Bool("speak_stop", false, "Stop listening for Speech input"),
@@ -60,12 +60,13 @@ func parseFlags() *types.Flags {
 		Pause:          flag.Bool("pause", false, "Pause audio playback"),
 		Resume:         flag.Bool("resume", false, "Resume audio playback"),
 		TogglePlayback: flag.Bool("toggle_playback", false, "Toggle audio playback"),
-		OllamaRequest:  flag.Bool("ollama", false, "Request Ollama query"),
-		OllamaModel:    flag.String("ollama_model", "", "Ollama model to use"),
-		OllamaPreface:  flag.String("ollama_preface", "", "Preface text for the Ollama prompt"),
-		OllamaPort:     flag.Int("ollama_port", 0, "Input for Ollama"),
 	}
 	flag.Parse()
+	// If no flag arguments are provided, set Convo to true
+	if flag.NArg() == 0 {
+		flags.Convo = new(bool)
+		*flags.Convo = true
+	}
 	return flags
 }
 
@@ -78,14 +79,9 @@ func loadConfig(configName string) map[string]interface{} {
 }
 
 func initializeAppState(flags *types.Flags, configData map[string]interface{}) types.AppState {
-	ollamaModel := config.GetStringOrDefault(configData, "OllamaModel", "")
-	if *flags.OllamaModel != "" {
-		ollamaModel = *flags.OllamaModel
-	}
-
 	return types.AppState{
 		Port:                  *flags.Port,
-		UserInput:             *flags.UserInput,
+		ReadText:              *flags.ReadText,
 		ServerAlreadyRunning:  server.CheckServerRunning(*flags.Port),
 		ConversationMode:      *flags.Convo,
 		StatusRequest:         *flags.Status,
@@ -98,16 +94,14 @@ func initializeAppState(flags *types.Flags, configData map[string]interface{}) t
 		StartSpeechRequest:    *flags.SpeakStart,
 		StopSpeechRequest:     *flags.SpeakStop,
 		ToggleSpeechRequest:   *flags.SpeakToggle,
-		SpeechInputChan:       make(chan string),
+		SpeakTextChan:         make(chan string),
 		VoskModelPath:         config.GetStringOrDefault(configData, "VoskModelPath", ""),
 		AzureSubscriptionKey:  config.GetStringOrDefault(configData, "AzureSubscriptionKey", ""),
 		AzureRegion:           config.GetStringOrDefault(configData, "AzureRegion", "eastus"),
 		AzureVoiceGender:      config.GetStringOrDefault(configData, "VoiceGender", "Female"),
 		AzureVoiceName:        config.GetStringOrDefault(configData, "VoiceName", "en-US-JennyNeural"),
-		OllamaRequest:         *flags.OllamaRequest,
-		OllamaPort:            *flags.OllamaPort,
-		OllamaModel:           ollamaModel,
-		OllamaPreface:         *flags.OllamaPreface,
+		OllamaModel:           config.GetStringOrDefault(configData, "OllamaModel", "en-US-JennyNeural"),
+		OllamaPreface:         config.GetStringOrDefault(configData, "OllamaPreface", "en-US-JennyNeural"),
 	}
 }
 
@@ -122,7 +116,7 @@ func initializeSpeechRecognizer(state *types.AppState) {
 
 func handleServerState(state *types.AppState) {
 	if !server.CheckServerRunning(state.Port) {
-		state.AudioPlayer = audio.NewAudioPlayer()
+		state.AudioPlayer = player.NewAudioPlayer()
 		go server.StartServer(*state)
 		time.Sleep(35 * time.Millisecond)
 	} else {
@@ -148,18 +142,18 @@ func processRequest(state types.AppState) {
 
 	switch {
 	case state.StartSpeechRequest:
-		sendPostRequest(client, state.Port, "/start_speech")
+		sendPostRequest(client, state.Port, "/speak_start")
 
 	case state.StopSpeechRequest:
-		sendPostRequest(client, state.Port, "/stop_speech")
+		sendPostRequest(client, state.Port, "/speak_stop")
 
 	case state.ToggleSpeechRequest:
 		toggleSpeechRecognition(client, state)
 
-	case state.UserInput != "" && state.OllamaRequest:
+	case state.ReadText != "" && state.OllamaRequest:
 		processOllamaRequest(client, state)
 
-	case state.UserInput != "":
+	case state.ReadText != "":
 		processAzureRequest(client, state)
 
 	case state.StatusRequest:
@@ -220,7 +214,7 @@ func toggleSpeechRecognition(client *http.Client, state types.AppState) {
 func processOllamaRequest(client *http.Client, state types.AppState) {
 	ollamaReq := ollama.OllamaRequest{
 		Model:   state.OllamaModel,
-		Prompt:  state.UserInput,
+		Prompt:  state.ReadText,
 		Preface: state.OllamaPreface,
 	}
 	body, err := json.Marshal(ollamaReq)
@@ -238,12 +232,12 @@ func processOllamaRequest(client *http.Client, state types.AppState) {
 }
 
 func processAzureRequest(client *http.Client, state types.AppState) {
-	speechReq := speech.AzureSpeechRequest{
-		Text:      state.UserInput,
+	speechReq := read.AzureSpeechRequest{
+		Text:      state.ReadText,
 		Gender:    state.AzureVoiceGender,
 		VoiceName: state.AzureVoiceName,
 	}
-	body := bytes.NewBufferString(speechReq.SpeechRequestToJSON())
+	body := bytes.NewBufferString(speechReq.AzureRequestToJSON())
 	resp, err := client.Post(fmt.Sprintf("http://localhost:%d/input", state.Port), "application/json", body)
 	if err != nil {
 		return

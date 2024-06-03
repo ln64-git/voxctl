@@ -1,15 +1,15 @@
 package types
 
 import (
-	"github.com/ln64-git/voxctl/internal/audio"
-	"github.com/ln64-git/voxctl/internal/vosk"
+	"github.com/ln64-git/voxctl/internal/audio/player"
+	"github.com/ln64-git/voxctl/internal/audio/vosk"
 )
 
 // State struct to hold program state
 type AppState struct {
 	Port                  int
-	UserInput             string
-	AudioPlayer           *audio.AudioPlayer
+	ReadText              string
+	AudioPlayer           *player.AudioPlayer
 	ServerAlreadyRunning  bool
 	ConversationMode      bool
 	StatusRequest         bool
@@ -24,9 +24,9 @@ type AppState struct {
 	ToggleSpeechRequest   bool
 	ToggleSpeechStatus    bool
 	VoskModelPath         string
-	SpeechInputChan       chan string
+	SpeakTextChan         chan string
 	SpeechRecognizer      vosk.SpeechRecognizer
-	SpeechInput           string
+	SpeakText             string
 	AzureSubscriptionKey  string
 	AzureRegion           string
 	AzureVoiceGender      string
