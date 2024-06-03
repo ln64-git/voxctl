@@ -13,9 +13,6 @@ import (
 )
 
 func HandleConversation(state *types.AppState) {
-	log.Info("HandleConversation - state.SpeakText:")
-	log.Info(state.SpeakText)
-
 	switch strings.TrimSpace(state.SpeakText) {
 	case "stop":
 		state.AudioPlayer.Stop()
@@ -42,6 +39,9 @@ func HandleConversation(state *types.AppState) {
 				return
 			}
 
+			log.Infof("SpeakText - %s -", state.SpeakText)
+			state.SpeakText = ""
+
 			req, err := http.NewRequest("POST", "http://localhost:"+strconv.Itoa(state.Port)+"/chat", strings.NewReader(string(body)))
 			if err != nil {
 				logrus.Errorf("Error creating request: %v", err)
@@ -58,7 +58,6 @@ func HandleConversation(state *types.AppState) {
 				logrus.Errorf("Request failed with status: %v", resp.Status)
 				return
 			}
-			state.SpeakText = ""
 		}()
 	}
 }

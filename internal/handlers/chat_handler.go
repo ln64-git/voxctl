@@ -34,9 +34,6 @@ func HandleChatRequest(w http.ResponseWriter, r *http.Request, state *types.AppS
 
 	finalPrompt := ollamaReq.Preface + ollamaReq.Prompt
 
-	log.Infof("Preface is: %s", ollamaReq.Preface)
-	log.Infof("Model is: %s", ollamaReq.Model)
-
 	tokenChan, err := ollama.GetOllamaTokenResponse(ollamaReq.Model, finalPrompt)
 	if err != nil {
 		log.Errorf("Failed to get Ollama token response: %v", err)
