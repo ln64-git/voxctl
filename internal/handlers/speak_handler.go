@@ -4,8 +4,8 @@ import (
 	"net/http"
 
 	"github.com/charmbracelet/log"
+	"github.com/ln64-git/voxctl/internal/function/clipboard"
 	"github.com/ln64-git/voxctl/internal/types"
-	"github.com/ln64-git/voxctl/internal/utils/clipboard"
 	"github.com/sirupsen/logrus"
 )
 

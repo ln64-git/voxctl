@@ -8,8 +8,8 @@ import (
 	"github.com/charmbracelet/log"
 	"github.com/ln64-git/voxctl/external/azure"
 	"github.com/ln64-git/voxctl/external/ollama"
+	"github.com/ln64-git/voxctl/internal/function/chat"
 	"github.com/ln64-git/voxctl/internal/types"
-	"github.com/ln64-git/voxctl/internal/utils/chat"
 )
 
 func HandleChatRequest(w http.ResponseWriter, r *http.Request, state *types.AppState) {

@@ -15,9 +15,9 @@ import (
 	"github.com/ln64-git/voxctl/external/ollama"
 	"github.com/ln64-git/voxctl/internal/audio/player"
 	"github.com/ln64-git/voxctl/internal/config"
+	"github.com/ln64-git/voxctl/internal/function/read"
 	"github.com/ln64-git/voxctl/internal/server"
 	"github.com/ln64-git/voxctl/internal/types"
-	"github.com/ln64-git/voxctl/internal/utils/read"
 	"github.com/sirupsen/logrus"
 )
 

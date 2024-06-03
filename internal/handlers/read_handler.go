@@ -5,8 +5,8 @@ import (
 	"net/http"
 
 	"github.com/charmbracelet/log"
+	"github.com/ln64-git/voxctl/internal/function/read"
 	"github.com/ln64-git/voxctl/internal/types"
-	"github.com/ln64-git/voxctl/internal/utils/read"
 )
 
 func HandleReadText(w http.ResponseWriter, r *http.Request, state *types.AppState) {

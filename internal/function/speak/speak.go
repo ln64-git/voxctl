@@ -5,8 +5,8 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/log"
+	"github.com/ln64-git/voxctl/internal/function/convo"
 	"github.com/ln64-git/voxctl/internal/types"
-	"github.com/ln64-git/voxctl/internal/utils/convo"
 )
 
 func ProcessSpeakText(state *types.AppState) {

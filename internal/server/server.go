@@ -10,9 +10,9 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/ln64-git/voxctl/internal/audio/vosk"
+	"github.com/ln64-git/voxctl/internal/function/speak"
 	"github.com/ln64-git/voxctl/internal/handlers"
 	"github.com/ln64-git/voxctl/internal/types"
-	"github.com/ln64-git/voxctl/internal/utils/speak"
 	"github.com/sirupsen/logrus"
 )
 
