@@ -69,7 +69,7 @@ func StartServer(state *types.AppState) {
 	// If Conversation Mode then Start Speech Recognition
 	if state.ConversationMode {
 		log.Info("Conversation Mode Enabled: Starting Speech Recognition")
-		err := state.SpeechRecognizer.Start(state.SpeechTextChan)
+		err := state.SpeechRecognizer.Start(state.ScribeTextChan)
 		state.ScribeStatus = true
 		if err != nil {
 			logrus.Errorf("Error starting speech recognizer: %v", err)

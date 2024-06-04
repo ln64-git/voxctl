@@ -7,12 +7,12 @@ import (
 
 // State struct to hold program state
 type AppState struct {
-	Port                 int
-	AudioPlayer          *player.AudioPlayer
-	ServerAlreadyRunning bool
-	ConversationMode     bool
-	SpeakText            string
-	ChatText             string
+	Port                  int
+	AudioPlayer           *player.AudioPlayer
+	ServerAlreadyRunning  bool
+	ConversationMode      bool
+	SpeakText             string
+	ChatText              string
 	ScribeText            string
 	StatusRequest         bool
 	StopRequest           bool
@@ -26,7 +26,7 @@ type AppState struct {
 	ScribeToggleRequest   bool
 	ScribeStatus          bool
 	VoskModelPath         string
-	SpeechTextChan        chan string
+	ScribeTextChan        chan string
 	SpeechRecognizer      *vosk.SpeechRecognizer
 	AzureSubscriptionKey  string
 	AzureRegion           string

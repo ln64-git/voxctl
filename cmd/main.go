@@ -92,7 +92,7 @@ func initializeAppState(flags *types.Flags, configData map[string]interface{}) t
 		ScribeStartRequest:    *flags.ScribeStart,
 		ScribeStopRequest:     *flags.ScribeStop,
 		ScribeToggleRequest:   *flags.ScribeToggle,
-		SpeechTextChan:        make(chan string),
+		ScribeTextChan:        make(chan string),
 		VoskModelPath:         config.GetStringOrDefault(configData, "VoskModelPath", ""),
 		AzureSubscriptionKey:  config.GetStringOrDefault(configData, "AzureSubscriptionKey", ""),
 		AzureRegion:           config.GetStringOrDefault(configData, "AzureRegion", "eastus"),

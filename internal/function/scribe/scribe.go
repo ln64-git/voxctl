@@ -7,10 +7,11 @@ import (
 	"github.com/charmbracelet/log"
 	"github.com/ln64-git/voxctl/internal/function/convo"
 	"github.com/ln64-git/voxctl/internal/types"
+	"github.com/sirupsen/logrus"
 )
 
 func ScribeText(state *types.AppState) {
-	for result := range state.SpeechTextChan {
+	for result := range state.ScribeTextChan {
 		var textResult types.TextResponse
 		err := json.Unmarshal([]byte(result), &textResult)
 		if err != nil {
@@ -27,4 +28,23 @@ func ScribeText(state *types.AppState) {
 			}
 		}
 	}
+}
+
+func ScribeStart(state *types.AppState) {
+	go func() {
+		err := state.SpeechRecognizer.Start(state.ScribeTextChan)
+		if err != nil {
+			logrus.Errorf("Error during speech recognition: %v", err)
+		}
+	}()
+	log.Infof("SpeechInput Starting")
+	state.ScribeStatus = true
+}
+
+func ScribeStop(state *types.AppState) {
+	go func() {
+		state.SpeechRecognizer.Stop()
+	}()
+	log.Infof("SpeechInput Stopped")
+	state.ScribeStatus = false
 }
