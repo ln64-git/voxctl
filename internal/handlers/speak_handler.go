@@ -1,53 +1,32 @@
 package handlers
 
 import (
+	"encoding/json"
 	"net/http"
 
 	"github.com/charmbracelet/log"
-	"github.com/ln64-git/voxctl/internal/function/clipboard"
+	"github.com/ln64-git/voxctl/internal/function/speak"
 	"github.com/ln64-git/voxctl/internal/types"
-	"github.com/sirupsen/logrus"
 )
 
-func HandleSpeakStart(w http.ResponseWriter, r *http.Request, state *types.AppState) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+func HandleSpeakText(w http.ResponseWriter, r *http.Request, state *types.AppState) {
+	// Process the Azure speech request
+	var speechReq speak.AzureSpeechRequest
+	decoder := json.NewDecoder(r.Body)
+	err := decoder.Decode(&speechReq)
+	if err != nil {
+		log.Errorf("Failed to process speech request: %v", err)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	go func() {
-		err := state.SpeechRecognizer.Start(state.SpeechTextChan)
-		if err != nil {
-			logrus.Errorf("Error during speech recognition: %v", err)
-		}
-	}()
-	log.Infof("SpeechInput Starting")
-	state.ScribeStatus = true
-	w.WriteHeader(http.StatusOK)
-}
 
-func HandleSpeakStop(w http.ResponseWriter, r *http.Request, state *types.AppState) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	// Read the text using the processed request
+	err = speak.SpeakText(speechReq, state.AzureSubscriptionKey, state.AzureRegion, state.AudioPlayer)
+	if err != nil {
+		log.Errorf("Failed to process speech: %v", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	go func() {
-		state.SpeechRecognizer.Stop()
-		clipboard.CopyToClipboard(state.SpeakText)
-		state.SpeakText = ""
-	}()
-	log.Infof("SpeechInput Stopped")
-	state.ScribeStatus = false
-	w.WriteHeader(http.StatusOK)
-}
 
-func HandleSpeakToggle(w http.ResponseWriter, r *http.Request, state *types.AppState) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-	if state.ScribeStatus {
-		HandleSpeakStop(w, r, state)
-	} else {
-		HandleSpeakStart(w, r, state)
-	}
+	w.WriteHeader(http.StatusOK)
 }

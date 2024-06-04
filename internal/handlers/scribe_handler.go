@@ -1,0 +1,53 @@
+package handlers
+
+import (
+	"net/http"
+
+	"github.com/charmbracelet/log"
+	"github.com/ln64-git/voxctl/internal/function/clipboard"
+	"github.com/ln64-git/voxctl/internal/types"
+	"github.com/sirupsen/logrus"
+)
+
+func HandleScribeStart(w http.ResponseWriter, r *http.Request, state *types.AppState) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	go func() {
+		err := state.SpeechRecognizer.Start(state.SpeechTextChan)
+		if err != nil {
+			logrus.Errorf("Error during speech recognition: %v", err)
+		}
+	}()
+	log.Infof("SpeechInput Starting")
+	state.ScribeStatus = true
+	w.WriteHeader(http.StatusOK)
+}
+
+func HandleScribeStop(w http.ResponseWriter, r *http.Request, state *types.AppState) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	go func() {
+		state.SpeechRecognizer.Stop()
+		clipboard.CopyToClipboard(state.SpeakText)
+		state.SpeakText = ""
+	}()
+	log.Infof("SpeechInput Stopped")
+	state.ScribeStatus = false
+	w.WriteHeader(http.StatusOK)
+}
+
+func HandleScribeToggle(w http.ResponseWriter, r *http.Request, state *types.AppState) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	if state.ScribeStatus {
+		HandleScribeStop(w, r, state)
+	} else {
+		HandleScribeStart(w, r, state)
+	}
+}

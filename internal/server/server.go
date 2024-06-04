@@ -24,15 +24,15 @@ func StartServer(state *types.AppState) {
 	initializeSpeechRecognizer(state)
 
 	http.HandleFunc("/scribe_start", func(w http.ResponseWriter, r *http.Request) {
-		handlers.HandleSpeakStart(w, r, state)
+		handlers.HandleScribeStart(w, r, state)
 	})
 
 	http.HandleFunc("/scribe_stop", func(w http.ResponseWriter, r *http.Request) {
-		handlers.HandleSpeakStop(w, r, state)
+		handlers.HandleScribeStop(w, r, state)
 	})
 
 	http.HandleFunc("/scribe_toggle", func(w http.ResponseWriter, r *http.Request) {
-		handlers.HandleSpeakToggle(w, r, state)
+		handlers.HandleScribeToggle(w, r, state)
 	})
 
 	http.HandleFunc("/chat", func(w http.ResponseWriter, r *http.Request) {
