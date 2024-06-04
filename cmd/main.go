@@ -15,7 +15,7 @@ import (
 	"github.com/ln64-git/voxctl/external/ollama"
 	"github.com/ln64-git/voxctl/internal/audio/player"
 	"github.com/ln64-git/voxctl/internal/config"
-	"github.com/ln64-git/voxctl/internal/function/read"
+	"github.com/ln64-git/voxctl/internal/function/speak"
 	"github.com/ln64-git/voxctl/internal/server"
 	"github.com/ln64-git/voxctl/internal/types"
 	"github.com/sirupsen/logrus"
@@ -44,19 +44,19 @@ func main() {
 func parseFlags() *types.Flags {
 	flags := &types.Flags{
 		Port:           flag.Int("port", 8080, "Port number to connect or serve"),
-		ReadText:       flag.String("read_text", "", "User input for speech or ollama requests"),
 		Convo:          flag.Bool("convo", false, "Start Conversation Mode"),
-		SpeakStart:     flag.Bool("speak_start", false, "Start listening for Speech input"),
-		SpeakStop:      flag.Bool("speak_stop", false, "Stop listening for Speech input"),
-		SpeakToggle:    flag.Bool("speak_toggle", false, "Toggle listening for Speech input"),
+		SpeakText:      flag.String("speak", "", "User input for speech or ollama requests"),
+		ChatText:       flag.String("chat", "", "Chat with AI through text"),
+		ScribeStart:    flag.Bool("scribe_start", false, "Start listening for Speech input"),
+		ScribeStop:     flag.Bool("scribe_stop", false, "Stop listening for Speech input"),
+		ScribeToggle:   flag.Bool("scribe_toggle", false, "Toggle listening for Speech input"),
 		Status:         flag.Bool("status", false, "Request info"),
 		Stop:           flag.Bool("stop", false, "Stop audio playback"),
 		Clear:          flag.Bool("clear", false, "Clear playback"),
 		Quit:           flag.Bool("quit", false, "Exit application after request"),
 		Pause:          flag.Bool("pause", false, "Pause audio playback"),
 		Resume:         flag.Bool("resume", false, "Resume audio playback"),
-		TogglePlayback: flag.Bool("toggle_playback", false, "Toggle audio playback"),
-		ChatText:       flag.String("chat", "", "Chat with text"),
+		TogglePlayback: flag.Bool("playback_toggle", false, "Toggle audio playback"),
 	}
 	flag.Parse()
 	// If no flag arguments are provided, set Convo to true
@@ -78,9 +78,10 @@ func loadConfig(configName string) map[string]interface{} {
 func initializeAppState(flags *types.Flags, configData map[string]interface{}) types.AppState {
 	return types.AppState{
 		Port:                  *flags.Port,
-		ReadText:              *flags.ReadText,
 		ServerAlreadyRunning:  server.CheckServerRunning(*flags.Port),
 		ConversationMode:      *flags.Convo,
+		SpeakText:             *flags.SpeakText,
+		ChatText:              *flags.ChatText,
 		StatusRequest:         *flags.Status,
 		StopRequest:           *flags.Stop,
 		ClearRequest:          *flags.Clear,
@@ -88,16 +89,15 @@ func initializeAppState(flags *types.Flags, configData map[string]interface{}) t
 		PauseRequest:          *flags.Pause,
 		ResumeRequest:         *flags.Resume,
 		TogglePlaybackRequest: *flags.TogglePlayback,
-		SpeakStartRequest:     *flags.SpeakStart,
-		SpeakStopRequest:      *flags.SpeakStop,
-		SpeakToggleRequest:    *flags.SpeakToggle,
-		SpeakTextChan:         make(chan string),
+		ScribeStartRequest:    *flags.ScribeStart,
+		ScribeStopRequest:     *flags.ScribeStop,
+		ScribeToggleRequest:   *flags.ScribeToggle,
+		SpeechTextChan:        make(chan string),
 		VoskModelPath:         config.GetStringOrDefault(configData, "VoskModelPath", ""),
 		AzureSubscriptionKey:  config.GetStringOrDefault(configData, "AzureSubscriptionKey", ""),
 		AzureRegion:           config.GetStringOrDefault(configData, "AzureRegion", "eastus"),
 		AzureVoiceGender:      config.GetStringOrDefault(configData, "VoiceGender", "Female"),
 		AzureVoiceName:        config.GetStringOrDefault(configData, "VoiceName", "en-US-JennyNeural"),
-		ChatText:              *flags.ChatText,
 		OllamaModel:           config.GetStringOrDefault(configData, "OllamaModel", "llama3"),
 		OllamaPreface:         config.GetStringOrDefault(configData, "OllamaPreface", ""),
 	}
@@ -130,20 +130,20 @@ func processRequest(state *types.AppState) {
 	client := &http.Client{}
 
 	switch {
-	case state.SpeakStartRequest:
-		sendPostRequest(client, state.Port, "/speak_start")
+	case state.ScribeStartRequest:
+		sendPostRequest(client, state.Port, "/scribe_start")
 
-	case state.SpeakStopRequest:
-		sendPostRequest(client, state.Port, "/speak_stop")
+	case state.ScribeStopRequest:
+		sendPostRequest(client, state.Port, "/scribe_stop")
 
-	case state.SpeakToggleRequest:
-		sendPostRequest(client, state.Port, "/speak_toggle")
+	case state.ScribeToggleRequest:
+		sendPostRequest(client, state.Port, "/scribe_toggle")
 
 	case state.ChatText != "":
 		processChatRequest(client, state)
 
-	case state.ReadText != "":
-		processAzureRequest(client, state)
+	case state.SpeakText != "":
+		processSpeakRequest(client, state)
 
 	case state.StatusRequest:
 		processStatusRequest(client, state)
@@ -174,33 +174,6 @@ func sendPostRequest(client *http.Client, port int, endpoint string) {
 	defer resp.Body.Close()
 }
 
-func processSpeakToggle(client *http.Client, state *types.AppState) {
-	resp, err := client.Get(fmt.Sprintf("http://localhost:%d/status", state.Port))
-	if err != nil {
-		log.Errorf("Failed to get status: %v", err)
-		return
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		log.Errorf("Unexpected status code: %d", resp.StatusCode)
-		return
-	}
-
-	var status types.AppStatusState
-	err = json.NewDecoder(resp.Body).Decode(&status)
-	if err != nil {
-		log.Errorf("Failed to decode JSON response: %v", err)
-		return
-	}
-
-	log.Info(status.SpeakStatus)
-	// if status.SpeakStatus {
-	// 	sendPostRequest(client, state.Port, "/speak_stop")
-	// } else {
-	// 	sendPostRequest(client, state.Port, "/speak_start")
-	// }
-}
-
 func processChatRequest(client *http.Client, state *types.AppState) {
 	ollamaReq := ollama.OllamaRequest{
 		Model:   state.OllamaModel,
@@ -224,9 +197,9 @@ func processChatRequest(client *http.Client, state *types.AppState) {
 	defer resp.Body.Close()
 }
 
-func processAzureRequest(client *http.Client, state *types.AppState) {
-	speechReq := read.AzureSpeechRequest{
-		Text:      state.ReadText,
+func processSpeakRequest(client *http.Client, state *types.AppState) {
+	speechReq := speak.AzureSpeechRequest{
+		Text:      state.SpeakText,
 		Gender:    state.AzureVoiceGender,
 		VoiceName: state.AzureVoiceName,
 	}

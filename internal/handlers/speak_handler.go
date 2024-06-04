@@ -15,13 +15,13 @@ func HandleSpeakStart(w http.ResponseWriter, r *http.Request, state *types.AppSt
 		return
 	}
 	go func() {
-		err := state.SpeechRecognizer.Start(state.SpeakTextChan)
+		err := state.SpeechRecognizer.Start(state.SpeechTextChan)
 		if err != nil {
 			logrus.Errorf("Error during speech recognition: %v", err)
 		}
 	}()
 	log.Infof("SpeechInput Starting")
-	state.SpeakStatus = true
+	state.ScribeStatus = true
 	w.WriteHeader(http.StatusOK)
 }
 
@@ -36,7 +36,7 @@ func HandleSpeakStop(w http.ResponseWriter, r *http.Request, state *types.AppSta
 		state.SpeakText = ""
 	}()
 	log.Infof("SpeechInput Stopped")
-	state.SpeakStatus = false
+	state.ScribeStatus = false
 	w.WriteHeader(http.StatusOK)
 }
 
@@ -45,7 +45,7 @@ func HandleSpeakToggle(w http.ResponseWriter, r *http.Request, state *types.AppS
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	if state.SpeakStatus {
+	if state.ScribeStatus {
 		HandleSpeakStop(w, r, state)
 	} else {
 		HandleSpeakStart(w, r, state)

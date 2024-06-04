@@ -34,6 +34,8 @@ func HandleChatRequest(w http.ResponseWriter, r *http.Request, state *types.AppS
 
 	finalPrompt := ollamaReq.Preface + ollamaReq.Prompt
 
+	// A ReadEntry Object should be created here to keep track of 
+
 	tokenChan, err := ollama.GetOllamaTokenResponse(ollamaReq.Model, finalPrompt)
 	if err != nil {
 		log.Errorf("Failed to get Ollama token response: %v", err)
@@ -51,6 +53,7 @@ func HandleChatRequest(w http.ResponseWriter, r *http.Request, state *types.AppS
 				log.Errorf("Failed to synthesize speech: %v", err)
 				return
 			}
+			// I need to create a SpeechEntry which has fields for text, request,
 			state.AudioPlayer.Play(audioData)
 		}
 	}()
