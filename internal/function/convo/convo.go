@@ -16,15 +16,19 @@ func HandleConversation(state *types.AppState) {
 	switch strings.TrimSpace(state.SpeakText) {
 	case "stop":
 		state.AudioPlayer.Stop()
+		log.Info("SpeakText - Stop -")
 		state.SpeakText = ""
 	case "pause":
 		state.AudioPlayer.Pause()
+		log.Info("SpeakText - Pause -")
 		state.SpeakText = ""
 	case "resume":
 		state.AudioPlayer.Resume()
+		log.Info("SpeakText - Resume -")
 		state.SpeakText = ""
 	case "clear":
 		state.AudioPlayer.Clear()
+		log.Info("SpeakText - Clear -")
 		state.SpeakText = ""
 	default:
 		go func() {

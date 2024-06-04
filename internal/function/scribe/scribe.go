@@ -21,8 +21,6 @@ func ScribeText(state *types.AppState) {
 		text := strings.TrimSpace(textResult.Text)
 		if text != "" {
 			state.SpeakText += text + " "
-			// Handle conversation mode
-			// if state.ConversationMode && len(strings.Fields(state.SpeakText)) >= 3 {
 			if state.ConversationMode {
 				convo.HandleConversation(state)
 			}
