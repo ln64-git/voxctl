@@ -38,9 +38,6 @@ func ProcessChat(state *state.AppState, req *ollama.OllamaRequest) {
 				ChatQuery:   req.Prompt,
 			}
 
-			log.Info("ProcessChat - Audio Entry Added -")
-			log.Infof("ProcessChat - %s -", sentence)
-
 			// Send the audio entry to AudioEntriesUpdate channel
 			state.AudioConfig.AudioEntriesUpdate <- []models.AudioEntry{audioEntry}
 		}(sentence)

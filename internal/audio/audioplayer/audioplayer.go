@@ -119,6 +119,7 @@ func (ap *AudioPlayer) Pause() {
 	defer ap.mutex.Unlock()
 
 	if ap.audioController != nil {
+		log.Info("AudioPlayer - Pause - Paused")
 		ap.audioController.Paused = true
 	}
 }
@@ -128,12 +129,14 @@ func (ap *AudioPlayer) Resume() {
 	defer ap.mutex.Unlock()
 
 	if ap.audioController != nil {
+		log.Info("AudioPlayer - Resume - Resumed")
 		ap.audioController.Paused = false
 	}
 }
 
 func (ap *AudioPlayer) Stop() {
 	ap.mutex.Lock()
+	log.Info("AudioPlayer - Stop - Stopped")
 	defer ap.mutex.Unlock()
 }
 

@@ -76,6 +76,8 @@ func StartServer(state *state.AppState) {
 
 	go startHTTPServer(port)
 
+	state.ServerConfig.ServerRunning = true
+
 	if state.ConversationMode {
 		log.Info("Conversation Mode Enabled: Starting Speech Recognition")
 		err := state.ScribeConfig.SpeechRecognizer.Start(state.ScribeConfig.ScribeTextChan)
@@ -159,17 +161,16 @@ func initializeSpeechRecognizer(state *state.AppState) {
 	}
 }
 
-func HandleServerState(app_state *state.AppState) {
-	if !state.CheckServerRunning(app_state.ServerConfig.Port) {
-		// app_state.AudioConfig.AudioPlayer = audioplayer.NewAudioPlayer()
-		go StartServer(app_state)
-		time.Sleep(35 * time.Millisecond)
+func HandleServerState(appState *state.AppState) {
+	if !state.CheckServerRunning(appState.ServerConfig.Port) {
+		go StartServer(appState)
+		time.Sleep(100 * time.Millisecond) // Initial sleep to give server some time to start
 	} else {
-		resp, err := ConnectToServer(app_state.ServerConfig.Port)
+		resp, err := ConnectToServer(appState.ServerConfig.Port)
 		if err != nil {
-			log.Errorf("Failed to connect to the existing server on port %d: %v", app_state.ServerConfig.Port, err)
+			log.Errorf("Failed to connect to the existing server on port %d: %v", appState.ServerConfig.Port, err)
 		} else {
-			log.Infof("Connected to the existing server on port %d. Status: %s", app_state.ServerConfig.Port, resp.Status)
+			log.Infof("Connected to the existing server on port %d. Status: %s", appState.ServerConfig.Port, resp.Status)
 			go func() {
 				os.Exit(0)
 			}()

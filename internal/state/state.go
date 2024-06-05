@@ -27,6 +27,7 @@ type AppState struct {
 // ServerConfig holds the server-related configuration.
 type ServerConfig struct {
 	Port                 int
+	ServerRunning        bool
 	ServerAlreadyRunning bool
 }
 
@@ -75,6 +76,7 @@ func InitializeAppState(flags *flags.Flags, configData map[string]interface{}) A
 	return AppState{
 		ServerConfig: ServerConfig{
 			Port:                 *flags.Port,
+			ServerRunning:        false,
 			ServerAlreadyRunning: CheckServerRunning(*flags.Port),
 		},
 		AudioConfig: AudioConfig{

@@ -4,6 +4,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/charmbracelet/log"
 	"github.com/ln64-git/voxctl/config"
@@ -25,6 +26,11 @@ func main() {
 
 	// Check and start server
 	server.HandleServerState(&appState)
+
+	// Wait until the server is running
+	for !appState.ServerConfig.ServerRunning {
+		time.Sleep(50 * time.Millisecond)
+	}
 
 	// Process user request
 	request.ProcessRequest(&appState, flagState)

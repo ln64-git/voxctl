@@ -44,6 +44,9 @@ func ParseFlags() *Flags {
 	if flag.NArg() == 0 {
 		flagState.Quit = new(bool)
 		*flagState.Quit = false
+	} else {
+		flagState.Convo = new(bool)
+		*flagState.Convo = false
 	}
 	return flagState
 }
