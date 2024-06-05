@@ -51,6 +51,9 @@ func ProcessRequest(appState *state.AppState, flagState *flags.Flags) {
 
 	case *flagState.TogglePlayback:
 		sendPostRequest(client, appState.ServerConfig.Port, "/toggle_playback")
+
+	case *flagState.ExitServer:
+		sendPostRequest(client, appState.ServerConfig.Port, "/exit_server")
 	}
 }
 

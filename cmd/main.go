@@ -30,10 +30,10 @@ func main() {
 	request.ProcessRequest(&appState, flagState)
 
 	// Handle graceful shutdown
-	handleShutdown()
+	HandleShutdown()
 }
 
-func handleShutdown() {
+func HandleShutdown() {
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit

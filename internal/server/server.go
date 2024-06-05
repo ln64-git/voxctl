@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"strconv"
 	"time"
 
@@ -67,6 +68,10 @@ func StartServer(state *state.AppState) {
 
 	http.HandleFunc("/toggle_playback", func(w http.ResponseWriter, r *http.Request) {
 		handleTogglePlayback(w, r, state)
+	})
+
+	http.HandleFunc("/exit_server", func(w http.ResponseWriter, r *http.Request) {
+		handleExitRequest(w, r)
 	})
 
 	go startHTTPServer(port)
@@ -165,7 +170,22 @@ func HandleServerState(app_state *state.AppState) {
 			log.Errorf("Failed to connect to the existing server on port %d: %v", app_state.ServerConfig.Port, err)
 		} else {
 			log.Infof("Connected to the existing server on port %d. Status: %s", app_state.ServerConfig.Port, resp.Status)
+			go func() {
+				os.Exit(0)
+			}()
 			resp.Body.Close()
 		}
 	}
+}
+
+// handleExitRequest handles the /exit endpoint to gracefully shutdown the server.
+func handleExitRequest(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	go func() {
+		os.Exit(0)
+	}()
 }
