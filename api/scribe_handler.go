@@ -1,13 +1,13 @@
-package handlers
+package api
 
 import (
 	"net/http"
 
 	"github.com/ln64-git/voxctl/internal/function/scribe"
-	"github.com/ln64-git/voxctl/internal/types"
+	"github.com/ln64-git/voxctl/internal/state"
 )
 
-func HandleScribeStart(w http.ResponseWriter, r *http.Request, state *types.AppState) {
+func HandleScribeStart(w http.ResponseWriter, r *http.Request, state *state.AppState) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -16,7 +16,7 @@ func HandleScribeStart(w http.ResponseWriter, r *http.Request, state *types.AppS
 	w.WriteHeader(http.StatusOK)
 }
 
-func HandleScribeStop(w http.ResponseWriter, r *http.Request, state *types.AppState) {
+func HandleScribeStop(w http.ResponseWriter, r *http.Request, state *state.AppState) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -25,7 +25,7 @@ func HandleScribeStop(w http.ResponseWriter, r *http.Request, state *types.AppSt
 	w.WriteHeader(http.StatusOK)
 }
 
-func HandleScribeToggle(w http.ResponseWriter, r *http.Request, state *types.AppState) {
+func HandleScribeToggle(w http.ResponseWriter, r *http.Request, state *state.AppState) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return

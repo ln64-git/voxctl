@@ -7,10 +7,10 @@ import (
 	"github.com/ln64-git/voxctl/external/azure"
 	"github.com/ln64-git/voxctl/external/ollama"
 	"github.com/ln64-git/voxctl/internal/audio/player"
-	"github.com/ln64-git/voxctl/internal/types"
+	"github.com/ln64-git/voxctl/internal/state"
 )
 
-func ProcessChat(state *types.AppState, req *ollama.OllamaRequest) {
+func ProcessChat(state *state.AppState, req *ollama.OllamaRequest) {
 	finalPrompt := req.Preface + req.Prompt
 
 	tokenChan, err := ollama.GetOllamaTokenResponse(req.Model, finalPrompt)

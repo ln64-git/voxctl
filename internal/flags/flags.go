@@ -1,13 +1,28 @@
-package config
+package flags
 
 import (
 	"flag"
-
-	"github.com/ln64-git/voxctl/internal/types"
 )
 
-func ParseFlags() *types.Flags {
-	flags := &types.Flags{
+type Flags struct {
+	Port           *int
+	Convo          *bool
+	SpeakText      *string
+	ChatText       *string
+	ScribeStart    *bool
+	ScribeStop     *bool
+	ScribeToggle   *bool
+	Status         *bool
+	Stop           *bool
+	Clear          *bool
+	Quit           *bool
+	Pause          *bool
+	Resume         *bool
+	TogglePlayback *bool
+}
+
+func ParseFlags() *Flags {
+	flags := &Flags{
 		Port:           flag.Int("port", 8080, "Port number to connect or serve"),
 		Convo:          flag.Bool("convo", false, "Start Conversation Mode"),
 		SpeakText:      flag.String("speak", "", "User input for speech or ollama requests"),

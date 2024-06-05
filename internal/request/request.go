@@ -9,11 +9,12 @@ import (
 	"github.com/charmbracelet/log"
 	"github.com/ln64-git/voxctl/external/ollama"
 	"github.com/ln64-git/voxctl/internal/function/speak"
-	"github.com/ln64-git/voxctl/internal/types"
+	"github.com/ln64-git/voxctl/internal/server"
+	"github.com/ln64-git/voxctl/internal/state"
 	"github.com/sirupsen/logrus"
 )
 
-func ProcessRequest(state *types.AppState) {
+func ProcessRequest(state *state.AppState) {
 	client := &http.Client{}
 
 	switch {
@@ -61,7 +62,7 @@ func sendPostRequest(client *http.Client, port int, endpoint string) {
 	defer resp.Body.Close()
 }
 
-func processChatRequest(client *http.Client, state *types.AppState) {
+func processChatRequest(client *http.Client, state *state.AppState) {
 	ollamaReq := ollama.OllamaRequest{
 		Model:   state.OllamaModel,
 		Prompt:  state.ChatText,
@@ -84,7 +85,7 @@ func processChatRequest(client *http.Client, state *types.AppState) {
 	defer resp.Body.Close()
 }
 
-func processSpeakRequest(client *http.Client, state *types.AppState) {
+func processSpeakRequest(client *http.Client, state *state.AppState) {
 	speechReq := speak.AzureSpeechRequest{
 		Text:      state.SpeakText,
 		Gender:    state.AzureVoiceGender,
@@ -98,7 +99,7 @@ func processSpeakRequest(client *http.Client, state *types.AppState) {
 	defer resp.Body.Close()
 }
 
-func processStatusRequest(client *http.Client, state *types.AppState) {
+func processStatusRequest(client *http.Client, state *state.AppState) {
 	resp, err := client.Get(fmt.Sprintf("http://localhost:%d/status", state.Port))
 	if err != nil {
 		log.Errorf("Failed to get status: %v", err)
@@ -110,7 +111,7 @@ func processStatusRequest(client *http.Client, state *types.AppState) {
 		return
 	}
 
-	var status types.AppStatusState
+	var status server.AppStatus
 	err = json.NewDecoder(resp.Body).Decode(&status)
 	if err != nil {
 		log.Errorf("Failed to decode JSON response: %v", err)

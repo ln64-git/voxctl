@@ -6,13 +6,17 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/ln64-git/voxctl/internal/function/convo"
-	"github.com/ln64-git/voxctl/internal/types"
+	"github.com/ln64-git/voxctl/internal/state"
 	"github.com/sirupsen/logrus"
 )
 
-func ScribeText(state *types.AppState) {
+type TextResponse struct {
+	Text string `json:"text"`
+}
+
+func ScribeText(state *state.AppState) {
 	for result := range state.ScribeTextChan {
-		var textResult types.TextResponse
+		var textResult TextResponse
 		err := json.Unmarshal([]byte(result), &textResult)
 		if err != nil {
 			log.Printf("Failed to parse JSON: %v", err)
@@ -28,7 +32,7 @@ func ScribeText(state *types.AppState) {
 	}
 }
 
-func ScribeStart(state *types.AppState) {
+func ScribeStart(state *state.AppState) {
 	go func() {
 		err := state.SpeechRecognizer.Start(state.ScribeTextChan)
 		if err != nil {
@@ -39,7 +43,7 @@ func ScribeStart(state *types.AppState) {
 	state.ScribeStatus = true
 }
 
-func ScribeStop(state *types.AppState) {
+func ScribeStop(state *state.AppState) {
 	go func() {
 		state.SpeechRecognizer.Stop()
 	}()

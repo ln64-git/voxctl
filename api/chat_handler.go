@@ -1,4 +1,4 @@
-package handlers
+package api
 
 import (
 	"encoding/json"
@@ -8,10 +8,10 @@ import (
 	"github.com/charmbracelet/log"
 	"github.com/ln64-git/voxctl/external/ollama"
 	"github.com/ln64-git/voxctl/internal/function/chat"
-	"github.com/ln64-git/voxctl/internal/types"
+	"github.com/ln64-git/voxctl/internal/state"
 )
 
-func HandleChatRequest(w http.ResponseWriter, r *http.Request, state *types.AppState) {
+func HandleChatRequest(w http.ResponseWriter, r *http.Request, state *state.AppState) {
 	var req ollama.OllamaRequest
 
 	bodyBytes, err := io.ReadAll(r.Body)

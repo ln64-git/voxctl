@@ -8,11 +8,11 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/ln64-git/voxctl/external/ollama"
-	"github.com/ln64-git/voxctl/internal/types"
+	"github.com/ln64-git/voxctl/internal/state"
 	"github.com/sirupsen/logrus"
 )
 
-func HandleConversation(state *types.AppState) {
+func HandleConversation(state *state.AppState) {
 	switch strings.TrimSpace(state.SpeakText) {
 	case "stop":
 		state.AudioPlayer.Stop()

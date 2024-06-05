@@ -1,4 +1,4 @@
-package handlers
+package api
 
 import (
 	"encoding/json"
@@ -6,10 +6,10 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/ln64-git/voxctl/internal/function/speak"
-	"github.com/ln64-git/voxctl/internal/types"
+	"github.com/ln64-git/voxctl/internal/state"
 )
 
-func HandleSpeakText(w http.ResponseWriter, r *http.Request, state *types.AppState) {
+func HandleSpeakText(w http.ResponseWriter, r *http.Request, state *state.AppState) {
 	// Process the Azure speech request
 	var speechReq speak.AzureSpeechRequest
 	decoder := json.NewDecoder(r.Body)
