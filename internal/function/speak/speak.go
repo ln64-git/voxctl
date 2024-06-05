@@ -19,15 +19,26 @@ type AzureSpeechRequest struct {
 // SpeakText processes the speech request by synthesizing and playing the speech.
 func SpeakText(req AzureSpeechRequest, azureSubscriptionKey, azureRegion string, audioPlayer *player.AudioPlayer) error {
 	segments := segmentText(req.Text)
+	var audioEntries []player.AudioEntry
+	var fullText []string
+
 	for _, segment := range segments {
 		audioData, err := azure.SynthesizeSpeech(azureSubscriptionKey, azureRegion, segment, req.Gender, req.VoiceName)
 		if err != nil {
-			log.Errorf("%s", err)
+			log.Errorf("Failed to synthesize speech: %v", err)
 			return err
 		}
-		audioPlayer.Play(audioData)
+		fullText = append(fullText, segment)
+		audioEntry := player.AudioEntry{
+			AudioData:   audioData,
+			SegmentText: segment,
+			FullText:    fullText,
+		}
+		audioEntries = append(audioEntries, audioEntry)
 		log.Infof("Speech processed: %s", segment) // Example log message
 	}
+
+	audioPlayer.PlayAudioEntries(audioEntries)
 	return nil
 }
 

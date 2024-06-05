@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/charmbracelet/log"
+	"github.com/ln64-git/voxctl/internal/audio/player"
 	"github.com/ln64-git/voxctl/internal/audio/vosk"
 	"github.com/ln64-git/voxctl/internal/function/scribe"
 	"github.com/ln64-git/voxctl/internal/handlers"
@@ -20,7 +21,6 @@ func StartServer(state *types.AppState) {
 	port := state.Port
 	log.Infof("Starting server on port %d", port)
 
-	// Initialize Vosk speech recognizer
 	initializeSpeechRecognizer(state)
 
 	http.HandleFunc("/scribe_start", func(w http.ResponseWriter, r *http.Request) {
@@ -63,10 +63,8 @@ func StartServer(state *types.AppState) {
 		handleTogglePlayback(w, r, state)
 	})
 
-	// Start the HTTP server in a separate goroutine
 	go startHTTPServer(port)
 
-	// If Conversation Mode then Start Speech Recognition
 	if state.ConversationMode {
 		log.Info("Conversation Mode Enabled: Starting Speech Recognition")
 		err := state.SpeechRecognizer.Start(state.ScribeTextChan)
@@ -77,6 +75,8 @@ func StartServer(state *types.AppState) {
 	}
 
 	go scribe.ScribeText(state)
+	state.AudioPlayer = player.NewAudioPlayer() // Initialize AudioPlayer with state
+	state.AudioPlayer.Start()
 }
 
 func handleAudioRequest(w http.ResponseWriter, r *http.Request, controlFunc func()) {

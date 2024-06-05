@@ -12,8 +12,15 @@ import (
 	"github.com/faiface/beep/wav"
 )
 
+type AudioEntry struct {
+	AudioData   []byte
+	SegmentText string
+	FullText    []string
+	ChatQuery   string
+}
+
 type AudioPlayer struct {
-	audioQueue      [][]byte
+	audioQueue      []AudioEntry
 	mutex           sync.Mutex
 	audioController *beep.Ctrl
 	doneChannel     chan struct{}
@@ -24,12 +31,20 @@ type AudioPlayer struct {
 
 func NewAudioPlayer() *AudioPlayer {
 	return &AudioPlayer{
-		audioQueue:  make([][]byte, 0),
+		audioQueue:  make([]AudioEntry, 0),
 		doneChannel: make(chan struct{}),
 	}
 }
 
-func (ap *AudioPlayer) Play(audioData []byte) {
+func (ap *AudioPlayer) Start() {
+	go func() {
+		for {
+			ap.playNextAudioEntry()
+		}
+	}()
+}
+
+func (ap *AudioPlayer) PlayAudioEntries(entries []AudioEntry) {
 	if ap == nil {
 		log.Error("AudioPlayer is nil")
 		return
@@ -44,40 +59,36 @@ func (ap *AudioPlayer) Play(audioData []byte) {
 	ap.mutex.Lock()
 	defer ap.mutex.Unlock()
 
-	ap.audioQueue = append(ap.audioQueue, audioData)
+	ap.audioQueue = append(ap.audioQueue, entries...)
 
 	if !ap.isAudioPlaying {
 		ap.isAudioPlaying = true
-		go ap.playNextAudioChunk()
 	}
 }
 
-func (ap *AudioPlayer) playNextAudioChunk() {
+func (ap *AudioPlayer) playNextAudioEntry() {
+	// log.Info("playNextAudioEntry called")
 	ap.mutex.Lock()
 
 	if len(ap.audioQueue) == 0 {
-		// Entire queue is finished, signal completion
 		ap.isAudioPlaying = false
-		select {
-		case <-ap.doneChannel:
-		default:
-			close(ap.doneChannel)
-		}
 		ap.mutex.Unlock()
+		time.Sleep(100 * time.Millisecond)
 		return
 	}
 
-	audioData := ap.audioQueue[0]
+	entry := ap.audioQueue[0]
 	ap.audioQueue = ap.audioQueue[1:]
 
-	audioReader := bytes.NewReader(audioData)
+	ap.mutex.Unlock()
+
+	audioReader := bytes.NewReader(entry.AudioData)
 	audioReadCloser := io.NopCloser(audioReader)
 
 	audioStreamer, format, err := wav.Decode(audioReadCloser)
 	if err != nil {
 		log.Errorf("Error decoding audio data: %v", err)
-		ap.mutex.Unlock()
-		ap.playNextAudioChunkIfAvailable()
+		ap.playNextAudioEntry()
 		return
 	}
 	defer audioStreamer.Close()
@@ -87,15 +98,13 @@ func (ap *AudioPlayer) playNextAudioChunk() {
 		err = speaker.Init(ap.audioFormat.SampleRate, ap.audioFormat.SampleRate.N(time.Second/10))
 		if err != nil {
 			log.Errorf("Error initializing speaker: %v", err)
-			ap.mutex.Unlock()
-			ap.playNextAudioChunkIfAvailable()
+			ap.playNextAudioEntry()
 			return
 		}
 		ap.initialized = true
 	}
 
 	ap.audioController = &beep.Ctrl{Streamer: audioStreamer, Paused: false}
-	ap.mutex.Unlock()
 
 	var waitGroup sync.WaitGroup
 	waitGroup.Add(1)
@@ -105,19 +114,7 @@ func (ap *AudioPlayer) playNextAudioChunk() {
 	})))
 
 	waitGroup.Wait()
-	ap.playNextAudioChunkIfAvailable()
-}
-
-func (ap *AudioPlayer) playNextAudioChunkIfAvailable() {
-	ap.mutex.Lock()
-	defer ap.mutex.Unlock()
-
-	if len(ap.audioQueue) > 0 {
-		ap.isAudioPlaying = true
-		go ap.playNextAudioChunk()
-	} else {
-		ap.isAudioPlaying = false
-	}
+	ap.playNextAudioEntry()
 }
 
 func (ap *AudioPlayer) Pause() {
@@ -146,14 +143,12 @@ func (ap *AudioPlayer) Stop() {
 	ap.mutex.Lock()
 	defer ap.mutex.Unlock()
 
-	// Silence the audio controller
 	if ap.audioController != nil {
 		speaker.Lock()
 		ap.audioController.Paused = true
 		speaker.Unlock()
 	}
 
-	// Clear the audio queue and reset state
 	ap.audioQueue = nil
 	ap.isAudioPlaying = false
 }
@@ -162,12 +157,10 @@ func (ap *AudioPlayer) WaitForCompletion() {
 	ap.mutex.Lock()
 	defer ap.mutex.Unlock()
 
-	// Check if audio is already finished
 	if !ap.isAudioPlaying {
 		return
 	}
 
-	// Wait on the done channel to signal completion
 	<-ap.doneChannel
 }
 
@@ -193,10 +186,8 @@ func (ap *AudioPlayer) Clear() {
 	ap.isAudioPlaying = false
 	ap.initialized = false
 
-	// Ensure the channel is closed only once
 	select {
 	case <-ap.doneChannel:
-		// Channel is already closed
 	default:
 		close(ap.doneChannel)
 	}

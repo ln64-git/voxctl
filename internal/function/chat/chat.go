@@ -6,6 +6,7 @@ import (
 	"github.com/charmbracelet/log"
 	"github.com/ln64-git/voxctl/external/azure"
 	"github.com/ln64-git/voxctl/external/ollama"
+	"github.com/ln64-git/voxctl/internal/audio/player"
 	"github.com/ln64-git/voxctl/internal/types"
 )
 
@@ -21,6 +22,9 @@ func ProcessChat(state *types.AppState, req *ollama.OllamaRequest) {
 	sentenceChan := make(chan string)
 	go segmentTextFromChannel(tokenChan, sentenceChan)
 
+	var audioEntry []player.AudioEntry
+	var fullText []string
+
 	go func() {
 		for sentence := range sentenceChan {
 			audioData, err := azure.SynthesizeSpeech(state.AzureSubscriptionKey, state.AzureRegion, sentence, state.AzureVoiceGender, state.AzureVoiceName)
@@ -28,7 +32,14 @@ func ProcessChat(state *types.AppState, req *ollama.OllamaRequest) {
 				log.Errorf("Failed to synthesize speech: %v", err)
 				return
 			}
-			state.AudioPlayer.Play(audioData)
+			fullText = append(fullText, sentence)
+			audioEntry = append(audioEntry, player.AudioEntry{
+				AudioData:   audioData,
+				SegmentText: sentence,
+				FullText:    fullText,
+				ChatQuery:   req.Prompt,
+			})
+			state.AudioEntries = append(state.AudioEntries, audioEntry...)
 		}
 	}()
 }

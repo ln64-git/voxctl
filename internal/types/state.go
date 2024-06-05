@@ -6,9 +6,11 @@ import (
 )
 
 // State struct to hold program state
+
 type AppState struct {
 	Port                  int
 	AudioPlayer           *player.AudioPlayer
+	AudioEntries          []player.AudioEntry
 	ServerAlreadyRunning  bool
 	ConversationMode      bool
 	SpeakText             string
