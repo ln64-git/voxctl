@@ -59,8 +59,9 @@ func (ap *AudioPlayer) playNextAudioEntry(audioEntries []models.AudioEntry) {
 
 	entry := audioEntries[0]
 
-	log.Info("Current Entry is - ")
-	log.Info(entry.SegmentText)
+	log.Info("playNextAudioEntry - Current Entry Playing is - ")
+	log.Infof(entry.SegmentText)
+
 	audioReader := bytes.NewReader(entry.AudioData)
 	audioReadCloser := io.NopCloser(audioReader)
 	audioStreamer, format, err := wav.Decode(audioReadCloser)

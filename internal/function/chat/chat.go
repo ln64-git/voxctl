@@ -20,7 +20,7 @@ func ProcessChat(state *state.AppState, req *ollama.OllamaRequest) {
 	}
 
 	sentenceChan := make(chan string)
-	go segmentTextFromChannel(tokenChan, sentenceChan)
+	go buildSentences(tokenChan, sentenceChan)
 
 	for sentence := range sentenceChan {
 		go func(sentence string) {
@@ -44,11 +44,14 @@ func ProcessChat(state *state.AppState, req *ollama.OllamaRequest) {
 	}
 }
 
-func segmentTextFromChannel(tokenChan <-chan string, sentenceChan chan<- string) {
+func buildSentences(tokenChan <-chan string, sentenceChan chan<- string) {
 	defer close(sentenceChan)
 	var builder strings.Builder
 
 	for token := range tokenChan {
+		// Remove newline characters from token
+		token = strings.ReplaceAll(token, "\n", "")
+
 		builder.WriteString(token)
 		if strings.ContainsAny(token, ",.!?") {
 			sentence := builder.String()
