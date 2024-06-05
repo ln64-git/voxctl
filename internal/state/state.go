@@ -6,42 +6,56 @@ import (
 	"time"
 
 	"github.com/ln64-git/voxctl/config"
-	"github.com/ln64-git/voxctl/internal/audio/player"
+	"github.com/ln64-git/voxctl/internal/audio/audioplayer"
 	"github.com/ln64-git/voxctl/internal/audio/vosk"
 	"github.com/ln64-git/voxctl/internal/flags"
 )
 
-// State struct to hold program state
+// AppState holds the overall application state.
 type AppState struct {
-	Port                  int
-	AudioPlayer           *player.AudioPlayer
-	AudioEntries          []player.AudioEntry
-	ServerAlreadyRunning  bool
-	ConversationMode      bool
-	SpeakText             string
-	ChatText              string
-	ScribeText            string
-	StatusRequest         bool
-	StopRequest           bool
-	ClearRequest          bool
-	PauseRequest          bool
-	ResumeRequest         bool
-	TogglePlaybackRequest bool
-	QuitRequest           bool
-	ScribeStartRequest    bool
-	ScribeStopRequest     bool
-	ScribeToggleRequest   bool
-	ScribeStatus          bool
-	VoskModelPath         string
-	ScribeTextChan        chan string
-	SpeechRecognizer      *vosk.SpeechRecognizer
-	AzureSubscriptionKey  string
-	AzureRegion           string
-	AzureVoiceGender      string
-	AzureVoiceName        string
-	OllamaPort            int
-	OllamaModel           string
-	OllamaPreface         string
+	ServerConfig     ServerConfig
+	AudioConfig      AudioConfig
+	ScribeConfig     ScribeConfig
+	AzureConfig      AzureConfig
+	OllamaConfig     OllamaConfig
+	ConversationMode bool
+	SpeakText        string
+	ChatText         string
+}
+
+// ServerConfig holds the server-related configuration.
+type ServerConfig struct {
+	Port                 int
+	ServerAlreadyRunning bool
+}
+
+// AudioConfig holds the audio-related configuration.
+type AudioConfig struct {
+	AudioPlayer  *audioplayer.AudioPlayer
+	AudioEntries []audioplayer.AudioEntry
+}
+
+// ScribeConfig holds the scribe-related configuration.
+type ScribeConfig struct {
+	ScribeText       string
+	ScribeStatus     bool
+	VoskModelPath    string
+	ScribeTextChan   chan string
+	SpeechRecognizer *vosk.SpeechRecognizer
+}
+
+// AzureConfig holds the Azure-related configuration.
+type AzureConfig struct {
+	SubscriptionKey string
+	Region          string
+	VoiceGender     string
+	VoiceName       string
+}
+
+// OllamaConfig holds the Ollama-related configuration.
+type OllamaConfig struct {
+	Model   string
+	Preface string
 }
 
 // CheckServerRunning checks if the server is already running on the specified port.
@@ -57,28 +71,30 @@ func CheckServerRunning(port int) bool {
 
 func InitializeAppState(flags *flags.Flags, configData map[string]interface{}) AppState {
 	return AppState{
-		Port:                  *flags.Port,
-		ServerAlreadyRunning:  CheckServerRunning(*flags.Port),
-		ConversationMode:      *flags.Convo,
-		SpeakText:             *flags.SpeakText,
-		ChatText:              *flags.ChatText,
-		StatusRequest:         *flags.Status,
-		StopRequest:           *flags.Stop,
-		ClearRequest:          *flags.Clear,
-		QuitRequest:           *flags.Quit,
-		PauseRequest:          *flags.Pause,
-		ResumeRequest:         *flags.Resume,
-		TogglePlaybackRequest: *flags.TogglePlayback,
-		ScribeStartRequest:    *flags.ScribeStart,
-		ScribeStopRequest:     *flags.ScribeStop,
-		ScribeToggleRequest:   *flags.ScribeToggle,
-		ScribeTextChan:        make(chan string),
-		VoskModelPath:         config.GetStringOrDefault(configData, "VoskModelPath", ""),
-		AzureSubscriptionKey:  config.GetStringOrDefault(configData, "AzureSubscriptionKey", ""),
-		AzureRegion:           config.GetStringOrDefault(configData, "AzureRegion", "eastus"),
-		AzureVoiceGender:      config.GetStringOrDefault(configData, "VoiceGender", "Female"),
-		AzureVoiceName:        config.GetStringOrDefault(configData, "VoiceName", "en-US-JennyNeural"),
-		OllamaModel:           config.GetStringOrDefault(configData, "OllamaModel", "llama3"),
-		OllamaPreface:         config.GetStringOrDefault(configData, "OllamaPreface", ""),
+		ServerConfig: ServerConfig{
+			Port:                 *flags.Port,
+			ServerAlreadyRunning: CheckServerRunning(*flags.Port),
+		},
+		AudioConfig: AudioConfig{
+			AudioPlayer:  &audioplayer.AudioPlayer{},
+			AudioEntries: []audioplayer.AudioEntry{},
+		},
+		ScribeConfig: ScribeConfig{
+			ScribeTextChan: make(chan string),
+			VoskModelPath:  config.GetStringOrDefault(configData, "VoskModelPath", ""),
+		},
+		AzureConfig: AzureConfig{
+			SubscriptionKey: config.GetStringOrDefault(configData, "AzureSubscriptionKey", ""),
+			Region:          config.GetStringOrDefault(configData, "AzureRegion", "eastus"),
+			VoiceGender:     config.GetStringOrDefault(configData, "VoiceGender", "Female"),
+			VoiceName:       config.GetStringOrDefault(configData, "VoiceName", "en-US-JennyNeural"),
+		},
+		OllamaConfig: OllamaConfig{
+			Model:   config.GetStringOrDefault(configData, "OllamaModel", "llama3"),
+			Preface: config.GetStringOrDefault(configData, "OllamaPreface", ""),
+		},
+		ConversationMode: *flags.Convo,
+		SpeakText:        *flags.SpeakText,
+		ChatText:         *flags.ChatText,
 	}
 }

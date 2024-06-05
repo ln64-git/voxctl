@@ -6,28 +6,28 @@ import (
 	"syscall"
 
 	"github.com/charmbracelet/log"
-	"github.com/ln64-git/voxctl/internal/config"
+	"github.com/ln64-git/voxctl/config"
+	"github.com/ln64-git/voxctl/internal/flags"
 	"github.com/ln64-git/voxctl/internal/request"
 	"github.com/ln64-git/voxctl/internal/server"
 	"github.com/ln64-git/voxctl/internal/state"
-	"github.com/ln64-git/voxctl/pkg/flags"
 )
 
 func main() {
 	// Parse command-line flags
-	flagValues := flags.ParseFlags()
+	flagState := flags.ParseFlags()
 
 	// Retrieve configuration
 	configData := config.LoadConfig("voxctl.json")
 
 	// Initialize application state
-	appState := state.InitializeAppState(flagValues, configData)
+	appState := state.InitializeAppState(flagState, configData)
 
 	// Check and start server
 	server.HandleServerState(&appState)
 
 	// Process user request
-	request.ProcessRequest(&appState)
+	request.ProcessRequest(&appState, flagState)
 
 	// Handle graceful shutdown
 	handleShutdown()

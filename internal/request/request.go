@@ -8,48 +8,49 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/ln64-git/voxctl/external/ollama"
+	"github.com/ln64-git/voxctl/internal/flags"
 	"github.com/ln64-git/voxctl/internal/function/speak"
 	"github.com/ln64-git/voxctl/internal/server"
 	"github.com/ln64-git/voxctl/internal/state"
 	"github.com/sirupsen/logrus"
 )
 
-func ProcessRequest(state *state.AppState) {
+func ProcessRequest(appState *state.AppState, flagState *flags.Flags) {
 	client := &http.Client{}
 
 	switch {
-	case state.ScribeStartRequest:
-		sendPostRequest(client, state.Port, "/scribe_start")
+	case *flagState.ScribeStart:
+		sendPostRequest(client, appState.ServerConfig.Port, "/scribe_start")
 
-	case state.ScribeStopRequest:
-		sendPostRequest(client, state.Port, "/scribe_stop")
+	case *flagState.ScribeStop:
+		sendPostRequest(client, appState.ServerConfig.Port, "/scribe_stop")
 
-	case state.ScribeToggleRequest:
-		sendPostRequest(client, state.Port, "/scribe_toggle")
+	case *flagState.ScribeToggle:
+		sendPostRequest(client, appState.ServerConfig.Port, "/scribe_toggle")
 
-	case state.ChatText != "":
-		processChatRequest(client, state)
+	case appState.ChatText != "":
+		processChatRequest(client, appState)
 
-	case state.SpeakText != "":
-		processSpeakRequest(client, state)
+	case appState.SpeakText != "":
+		processSpeakRequest(client, appState)
 
-	case state.StatusRequest:
-		processStatusRequest(client, state)
+	case *flagState.Status:
+		processStatusRequest(client, appState)
 
-	case state.StopRequest:
-		sendPostRequest(client, state.Port, "/stop")
+	case *flagState.Stop:
+		sendPostRequest(client, appState.ServerConfig.Port, "/stop")
 
-	case state.ClearRequest:
-		sendPostRequest(client, state.Port, "/clear")
+	case *flagState.Clear:
+		sendPostRequest(client, appState.ServerConfig.Port, "/clear")
 
-	case state.PauseRequest:
-		sendPostRequest(client, state.Port, "/pause")
+	case *flagState.Pause:
+		sendPostRequest(client, appState.ServerConfig.Port, "/pause")
 
-	case state.ResumeRequest:
-		sendPostRequest(client, state.Port, "/resume")
+	case *flagState.Resume:
+		sendPostRequest(client, appState.ServerConfig.Port, "/resume")
 
-	case state.TogglePlaybackRequest:
-		sendPostRequest(client, state.Port, "/toggle_playback")
+	case *flagState.TogglePlayback:
+		sendPostRequest(client, appState.ServerConfig.Port, "/toggle_playback")
 	}
 }
 
@@ -62,11 +63,11 @@ func sendPostRequest(client *http.Client, port int, endpoint string) {
 	defer resp.Body.Close()
 }
 
-func processChatRequest(client *http.Client, state *state.AppState) {
+func processChatRequest(client *http.Client, appState *state.AppState) {
 	ollamaReq := ollama.OllamaRequest{
-		Model:   state.OllamaModel,
-		Prompt:  state.ChatText,
-		Preface: state.OllamaPreface,
+		Model:   appState.OllamaConfig.Model,
+		Prompt:  appState.ChatText,
+		Preface: appState.OllamaConfig.Preface,
 	}
 	body, err := json.Marshal(ollamaReq)
 	if err != nil {
@@ -77,7 +78,7 @@ func processChatRequest(client *http.Client, state *state.AppState) {
 	log.Info("processChatRequest - INIT")
 	log.Info(ollamaReq)
 
-	resp, err := client.Post(fmt.Sprintf("http://localhost:%d/chat", state.Port), "text/plain", bytes.NewBuffer(body))
+	resp, err := client.Post(fmt.Sprintf("http://localhost:%d/chat", appState.ServerConfig.Port), "text/plain", bytes.NewBuffer(body))
 	if err != nil {
 		logrus.Errorf("Failed to send Ollama request: %v", err)
 		return
@@ -85,22 +86,22 @@ func processChatRequest(client *http.Client, state *state.AppState) {
 	defer resp.Body.Close()
 }
 
-func processSpeakRequest(client *http.Client, state *state.AppState) {
+func processSpeakRequest(client *http.Client, appState *state.AppState) {
 	speechReq := speak.AzureSpeechRequest{
-		Text:      state.SpeakText,
-		Gender:    state.AzureVoiceGender,
-		VoiceName: state.AzureVoiceName,
+		Text:      appState.SpeakText,
+		Gender:    appState.AzureConfig.VoiceGender,
+		VoiceName: appState.AzureConfig.VoiceName,
 	}
 	body := bytes.NewBufferString(speechReq.AzureRequestToJSON())
-	resp, err := client.Post(fmt.Sprintf("http://localhost:%d/input", state.Port), "application/json", body)
+	resp, err := client.Post(fmt.Sprintf("http://localhost:%d/input", appState.ServerConfig.Port), "application/json", body)
 	if err != nil {
 		return
 	}
 	defer resp.Body.Close()
 }
 
-func processStatusRequest(client *http.Client, state *state.AppState) {
-	resp, err := client.Get(fmt.Sprintf("http://localhost:%d/status", state.Port))
+func processStatusRequest(client *http.Client, appState *state.AppState) {
+	resp, err := client.Get(fmt.Sprintf("http://localhost:%d/status", appState.ServerConfig.Port))
 	if err != nil {
 		log.Errorf("Failed to get status: %v", err)
 		return

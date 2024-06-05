@@ -6,7 +6,7 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/ln64-git/voxctl/external/azure"
-	"github.com/ln64-git/voxctl/internal/audio/player"
+	"github.com/ln64-git/voxctl/internal/audio/audioplayer"
 )
 
 // AzureSpeechRequest represents a request to synthesize speech.
@@ -17,9 +17,9 @@ type AzureSpeechRequest struct {
 }
 
 // SpeakText processes the speech request by synthesizing and playing the speech.
-func SpeakText(req AzureSpeechRequest, azureSubscriptionKey, azureRegion string, audioPlayer *player.AudioPlayer) error {
+func SpeakText(req AzureSpeechRequest, azureSubscriptionKey, azureRegion string, audioPlayer *audioplayer.AudioPlayer) error {
 	segments := segmentText(req.Text)
-	var audioEntries []player.AudioEntry
+	var audioEntries []audioplayer.AudioEntry
 	var fullText []string
 
 	for _, segment := range segments {
@@ -29,7 +29,7 @@ func SpeakText(req AzureSpeechRequest, azureSubscriptionKey, azureRegion string,
 			return err
 		}
 		fullText = append(fullText, segment)
-		audioEntry := player.AudioEntry{
+		audioEntry := audioplayer.AudioEntry{
 			AudioData:   audioData,
 			SegmentText: segment,
 			FullText:    fullText,

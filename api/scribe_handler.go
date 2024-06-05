@@ -30,7 +30,7 @@ func HandleScribeToggle(w http.ResponseWriter, r *http.Request, state *state.App
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	if state.ScribeStatus {
+	if state.ScribeConfig.ScribeStatus {
 		scribe.ScribeStop(state)
 	} else {
 		scribe.ScribeStart(state)

@@ -22,7 +22,7 @@ type Flags struct {
 }
 
 func ParseFlags() *Flags {
-	flags := &Flags{
+	flagState := &Flags{
 		Port:           flag.Int("port", 8080, "Port number to connect or serve"),
 		Convo:          flag.Bool("convo", false, "Start Conversation Mode"),
 		SpeakText:      flag.String("speak", "", "User input for speech or ollama requests"),
@@ -40,8 +40,8 @@ func ParseFlags() *Flags {
 	}
 	flag.Parse()
 	if flag.NArg() == 0 {
-		flags.Convo = new(bool)
-		*flags.Convo = true
+		flagState.Convo = new(bool)
+		*flagState.Convo = true
 	}
-	return flags
+	return flagState
 }

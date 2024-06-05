@@ -15,27 +15,27 @@ import (
 func HandleConversation(state *state.AppState) {
 	switch strings.TrimSpace(state.SpeakText) {
 	case "stop":
-		state.AudioPlayer.Stop()
+		state.AudioConfig.AudioPlayer.Stop()
 		log.Info("SpeakText - Stop -")
 		state.SpeakText = ""
 	case "pause":
-		state.AudioPlayer.Pause()
+		state.AudioConfig.AudioPlayer.Pause()
 		log.Info("SpeakText - Pause -")
 		state.SpeakText = ""
 	case "resume":
-		state.AudioPlayer.Resume()
+		state.AudioConfig.AudioPlayer.Resume()
 		log.Info("SpeakText - Resume -")
 		state.SpeakText = ""
 	case "clear":
-		state.AudioPlayer.Clear()
+		state.AudioConfig.AudioPlayer.Clear()
 		log.Info("SpeakText - Clear -")
 		state.SpeakText = ""
 	default:
 		go func() {
 			ollamaReq := ollama.OllamaRequest{
-				Model:   state.OllamaModel,
+				Model:   state.OllamaConfig.Model,
 				Prompt:  state.SpeakText,
-				Preface: state.OllamaPreface,
+				Preface: state.OllamaConfig.Preface,
 			}
 			body, err := json.Marshal(ollamaReq)
 			if err != nil {
@@ -46,7 +46,7 @@ func HandleConversation(state *state.AppState) {
 			log.Infof("SpeakText - %s -", state.SpeakText)
 			state.SpeakText = ""
 
-			req, err := http.NewRequest("POST", "http://localhost:"+strconv.Itoa(state.Port)+"/chat", strings.NewReader(string(body)))
+			req, err := http.NewRequest("POST", "http://localhost:"+strconv.Itoa(state.ServerConfig.Port)+"/chat", strings.NewReader(string(body)))
 			if err != nil {
 				logrus.Errorf("Error creating request: %v", err)
 				return

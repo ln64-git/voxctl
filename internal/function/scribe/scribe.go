@@ -15,7 +15,7 @@ type TextResponse struct {
 }
 
 func ScribeText(state *state.AppState) {
-	for result := range state.ScribeTextChan {
+	for result := range state.ScribeConfig.ScribeTextChan {
 		var textResult TextResponse
 		err := json.Unmarshal([]byte(result), &textResult)
 		if err != nil {
@@ -34,19 +34,19 @@ func ScribeText(state *state.AppState) {
 
 func ScribeStart(state *state.AppState) {
 	go func() {
-		err := state.SpeechRecognizer.Start(state.ScribeTextChan)
+		err := state.ScribeConfig.SpeechRecognizer.Start(state.ScribeConfig.ScribeTextChan)
 		if err != nil {
 			logrus.Errorf("Error during speech recognition: %v", err)
 		}
 	}()
 	log.Infof("SpeechInput Starting")
-	state.ScribeStatus = true
+	state.ScribeConfig.ScribeStatus = true
 }
 
 func ScribeStop(state *state.AppState) {
 	go func() {
-		state.SpeechRecognizer.Stop()
+		state.ScribeConfig.SpeechRecognizer.Stop()
 	}()
 	log.Infof("SpeechInput Stopped")
-	state.ScribeStatus = false
+	state.ScribeConfig.ScribeStatus = false
 }

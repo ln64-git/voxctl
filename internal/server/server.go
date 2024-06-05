@@ -9,7 +9,7 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/ln64-git/voxctl/api"
-	"github.com/ln64-git/voxctl/internal/audio/player"
+	"github.com/ln64-git/voxctl/internal/audio/audioplayer"
 	"github.com/ln64-git/voxctl/internal/audio/vosk"
 	"github.com/ln64-git/voxctl/internal/function/scribe"
 	"github.com/ln64-git/voxctl/internal/state"
@@ -24,7 +24,7 @@ type AppStatus struct {
 }
 
 func StartServer(state *state.AppState) {
-	port := state.Port
+	port := state.ServerConfig.Port
 	log.Infof("Starting server on port %d", port)
 
 	initializeSpeechRecognizer(state)
@@ -50,19 +50,19 @@ func StartServer(state *state.AppState) {
 	})
 
 	http.HandleFunc("/stop", func(w http.ResponseWriter, r *http.Request) {
-		handleAudioRequest(w, r, state.AudioPlayer.Stop)
+		handleAudioRequest(w, r, state.AudioConfig.AudioPlayer.Stop)
 	})
 
 	http.HandleFunc("/clear", func(w http.ResponseWriter, r *http.Request) {
-		handleAudioRequest(w, r, state.AudioPlayer.Clear)
+		handleAudioRequest(w, r, state.AudioConfig.AudioPlayer.Clear)
 	})
 
 	http.HandleFunc("/pause", func(w http.ResponseWriter, r *http.Request) {
-		handleAudioRequest(w, r, state.AudioPlayer.Pause)
+		handleAudioRequest(w, r, state.AudioConfig.AudioPlayer.Pause)
 	})
 
 	http.HandleFunc("/resume", func(w http.ResponseWriter, r *http.Request) {
-		handleAudioRequest(w, r, state.AudioPlayer.Resume)
+		handleAudioRequest(w, r, state.AudioConfig.AudioPlayer.Resume)
 	})
 
 	http.HandleFunc("/toggle_playback", func(w http.ResponseWriter, r *http.Request) {
@@ -73,16 +73,16 @@ func StartServer(state *state.AppState) {
 
 	if state.ConversationMode {
 		log.Info("Conversation Mode Enabled: Starting Speech Recognition")
-		err := state.SpeechRecognizer.Start(state.ScribeTextChan)
-		state.ScribeStatus = true
+		err := state.ScribeConfig.SpeechRecognizer.Start(state.ScribeConfig.ScribeTextChan)
+		state.ScribeConfig.ScribeStatus = true
 		if err != nil {
 			logrus.Errorf("Error starting speech recognizer: %v", err)
 		}
 	}
 
 	go scribe.ScribeText(state)
-	state.AudioPlayer = player.NewAudioPlayer() // Initialize AudioPlayer with state
-	state.AudioPlayer.Start()
+	state.AudioConfig.AudioPlayer = audioplayer.NewAudioPlayer() // Initialize AudioPlayer with state
+	state.AudioConfig.AudioPlayer.Start()
 }
 
 func handleAudioRequest(w http.ResponseWriter, r *http.Request, controlFunc func()) {
@@ -99,10 +99,10 @@ func handleTogglePlayback(w http.ResponseWriter, r *http.Request, state *state.A
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	if state.AudioPlayer.IsPlaying() {
-		state.AudioPlayer.Pause()
+	if state.AudioConfig.AudioPlayer.IsPlaying() {
+		state.AudioConfig.AudioPlayer.Pause()
 	} else {
-		state.AudioPlayer.Resume()
+		state.AudioConfig.AudioPlayer.Resume()
 	}
 	w.WriteHeader(http.StatusOK)
 }
@@ -113,9 +113,9 @@ func handleStatus(w http.ResponseWriter, r *http.Request, state *state.AppState)
 		return
 	}
 	status := AppStatus{
-		Port:                 state.Port,
-		ServerAlreadyRunning: state.ServerAlreadyRunning,
-		ScribeStatus:         state.ScribeStatus,
+		Port:                 state.ServerConfig.Port,
+		ServerAlreadyRunning: state.ServerConfig.ServerAlreadyRunning,
+		ScribeStatus:         state.ScribeConfig.ScribeStatus,
 	}
 	w.Header().Set("Content-Type", "application/json")
 	err := json.NewEncoder(w).Encode(status)
@@ -146,25 +146,25 @@ func ConnectToServer(port int) (*http.Response, error) {
 }
 
 func initializeSpeechRecognizer(state *state.AppState) {
-	recognizer, err := vosk.NewSpeechRecognizer(state.VoskModelPath)
+	recognizer, err := vosk.NewSpeechRecognizer(state.ScribeConfig.VoskModelPath)
 	if err != nil {
 		logrus.Errorf("Failed to initialize Vosk speech recognizer: %v", err)
 	} else {
-		state.SpeechRecognizer = recognizer // Assigning the pointer directly
+		state.ScribeConfig.SpeechRecognizer = recognizer // Assigning the pointer directly
 	}
 }
 
 func HandleServerState(app_state *state.AppState) {
-	if !state.CheckServerRunning(app_state.Port) {
-		app_state.AudioPlayer = player.NewAudioPlayer()
+	if !state.CheckServerRunning(app_state.ServerConfig.Port) {
+		app_state.AudioConfig.AudioPlayer = audioplayer.NewAudioPlayer()
 		go StartServer(app_state)
 		time.Sleep(35 * time.Millisecond)
 	} else {
-		resp, err := ConnectToServer(app_state.Port)
+		resp, err := ConnectToServer(app_state.ServerConfig.Port)
 		if err != nil {
-			log.Errorf("Failed to connect to the existing server on port %d: %v", app_state.Port, err)
+			log.Errorf("Failed to connect to the existing server on port %d: %v", app_state.ServerConfig.Port, err)
 		} else {
-			log.Infof("Connected to the existing server on port %d. Status: %s", app_state.Port, resp.Status)
+			log.Infof("Connected to the existing server on port %d. Status: %s", app_state.ServerConfig.Port, resp.Status)
 			resp.Body.Close()
 		}
 	}
