@@ -21,7 +21,7 @@ func HandleSpeakText(w http.ResponseWriter, r *http.Request, state *state.AppSta
 	}
 
 	// Read the text using the processed request
-	err = speak.SpeakText(speechReq, state.AzureConfig.SubscriptionKey, state.AzureConfig.Region, state.AudioConfig.AudioPlayer)
+	err = speak.SpeakText(speechReq, state)
 	if err != nil {
 		log.Errorf("Failed to process speech: %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)

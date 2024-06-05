@@ -18,7 +18,6 @@ type AudioPlayer struct {
 	audioController    *beep.Ctrl
 	doneChannel        chan struct{}
 	audioFormat        beep.Format
-	isAudioPlaying     bool
 	initialized        bool
 	audioEntriesUpdate chan []models.AudioEntry
 }
@@ -49,29 +48,12 @@ func (ap *AudioPlayer) Start() {
 	}()
 }
 
-func (ap *AudioPlayer) PlayAudioEntries(entries []models.AudioEntry) {
-	if ap == nil {
-		log.Error("AudioPlayer is nil")
-		return
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			log.Errorf("Recovered from panic: %v", r)
-		}
-	}()
-	ap.mutex.Lock()
-	defer ap.mutex.Unlock()
-	if !ap.isAudioPlaying {
-		ap.isAudioPlaying = true
-	}
-}
-
 func (ap *AudioPlayer) playNextAudioEntry(audioEntries []models.AudioEntry) {
 	ap.mutex.Lock()
 	defer ap.mutex.Unlock()
 
 	if len(audioEntries) == 0 {
-		ap.isAudioPlaying = false
+		ap.audioController.Paused = false
 		return
 	}
 
@@ -116,51 +98,15 @@ func (ap *AudioPlayer) playNextAudioEntry(audioEntries []models.AudioEntry) {
 		ap.playNextAudioEntry(audioEntries)
 	} else {
 		// No more audio entries, mark as not playing
-		ap.isAudioPlaying = false
-	}
-}
-
-func (ap *AudioPlayer) Pause() {
-	ap.mutex.Lock()
-	defer ap.mutex.Unlock()
-
-	if ap.audioController != nil {
-		speaker.Lock()
-		ap.audioController.Paused = true
-		speaker.Unlock()
-	}
-}
-
-func (ap *AudioPlayer) Resume() {
-	ap.mutex.Lock()
-	defer ap.mutex.Unlock()
-
-	if ap.audioController != nil {
-		speaker.Lock()
 		ap.audioController.Paused = false
-		speaker.Unlock()
 	}
-}
-
-func (ap *AudioPlayer) Stop() {
-	ap.mutex.Lock()
-	defer ap.mutex.Unlock()
-
-	if ap.audioController != nil {
-		speaker.Lock()
-		ap.audioController.Paused = true
-		speaker.Unlock()
-	}
-
-	// ap.audioQueue = nil
-	ap.isAudioPlaying = false
 }
 
 func (ap *AudioPlayer) WaitForCompletion() {
 	ap.mutex.Lock()
 	defer ap.mutex.Unlock()
 
-	if !ap.isAudioPlaying {
+	if ap.audioController.Paused {
 		return
 	}
 
@@ -170,30 +116,43 @@ func (ap *AudioPlayer) WaitForCompletion() {
 func (ap *AudioPlayer) IsPlaying() bool {
 	ap.mutex.Lock()
 	defer ap.mutex.Unlock()
-	return ap.isAudioPlaying
+	return !ap.audioController.Paused
 }
 
-func (ap *AudioPlayer) SetIsPlaying(isPlaying bool) {
+func (ap *AudioPlayer) Pause() {
 	ap.mutex.Lock()
 	defer ap.mutex.Unlock()
-	ap.audioController.Paused = isPlaying
+
+	if ap.audioController != nil {
+		ap.audioController.Paused = true
+	}
+}
+
+func (ap *AudioPlayer) Resume() {
+	ap.mutex.Lock()
+	defer ap.mutex.Unlock()
+
+	if ap.audioController != nil {
+		ap.audioController.Paused = false
+	}
+}
+
+func (ap *AudioPlayer) Stop() {
+	ap.mutex.Lock()
+	defer ap.mutex.Unlock()
 }
 
 func (ap *AudioPlayer) Clear() {
 	ap.mutex.Lock()
 	defer ap.mutex.Unlock()
 
-	// ap.audioQueue = nil
-	ap.audioController = nil
-	ap.audioFormat = beep.Format{}
-	ap.isAudioPlaying = false
-	ap.initialized = false
-
-	select {
-	case <-ap.doneChannel:
-	default:
-		close(ap.doneChannel)
+	if ap.audioController != nil {
+		ap.audioController.Paused = true
+		ap.audioController = nil
+		ap.audioFormat = beep.Format{}
+		ap.initialized = false
 	}
 
+	close(ap.doneChannel)
 	ap.doneChannel = make(chan struct{})
 }

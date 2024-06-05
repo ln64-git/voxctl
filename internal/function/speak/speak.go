@@ -6,8 +6,8 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/ln64-git/voxctl/external/azure"
-	"github.com/ln64-git/voxctl/internal/audio/audioplayer"
 	"github.com/ln64-git/voxctl/internal/models"
+	"github.com/ln64-git/voxctl/internal/state"
 )
 
 // AzureSpeechRequest represents a request to synthesize speech.
@@ -18,13 +18,12 @@ type AzureSpeechRequest struct {
 }
 
 // SpeakText processes the speech request by synthesizing and playing the speech.
-func SpeakText(req AzureSpeechRequest, azureSubscriptionKey, azureRegion string, audioPlayer *audioplayer.AudioPlayer) error {
+func SpeakText(req AzureSpeechRequest, state *state.AppState) error {
 	segments := segmentText(req.Text)
-	var audioEntries []models.AudioEntry
 	var fullText []string
 
 	for _, segment := range segments {
-		audioData, err := azure.SynthesizeSpeech(azureSubscriptionKey, azureRegion, segment, req.Gender, req.VoiceName)
+		audioData, err := azure.SynthesizeSpeech(state.AzureConfig.SubscriptionKey, state.AzureConfig.Region, segment, req.Gender, req.VoiceName)
 		if err != nil {
 			log.Errorf("Failed to synthesize speech: %v", err)
 			return err
@@ -35,11 +34,10 @@ func SpeakText(req AzureSpeechRequest, azureSubscriptionKey, azureRegion string,
 			SegmentText: segment,
 			FullText:    fullText,
 		}
-		audioEntries = append(audioEntries, audioEntry)
+		state.AudioConfig.AudioEntriesUpdate <- []models.AudioEntry{audioEntry}
 		log.Infof("Speech processed: %s", segment) // Example log message
 	}
 
-	audioPlayer.PlayAudioEntries(audioEntries)
 	return nil
 }
 
