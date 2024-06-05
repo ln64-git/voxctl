@@ -9,6 +9,7 @@ import (
 	"github.com/ln64-git/voxctl/internal/audio/audioplayer"
 	"github.com/ln64-git/voxctl/internal/audio/vosk"
 	"github.com/ln64-git/voxctl/internal/flags"
+	"github.com/ln64-git/voxctl/internal/models"
 )
 
 // AppState holds the overall application state.
@@ -31,8 +32,9 @@ type ServerConfig struct {
 
 // AudioConfig holds the audio-related configuration.
 type AudioConfig struct {
-	AudioPlayer  *audioplayer.AudioPlayer
-	AudioEntries []audioplayer.AudioEntry
+	AudioPlayer        *audioplayer.AudioPlayer
+	AudioEntries       []models.AudioEntry
+	AudioEntriesUpdate chan []models.AudioEntry
 }
 
 // ScribeConfig holds the scribe-related configuration.
@@ -76,8 +78,9 @@ func InitializeAppState(flags *flags.Flags, configData map[string]interface{}) A
 			ServerAlreadyRunning: CheckServerRunning(*flags.Port),
 		},
 		AudioConfig: AudioConfig{
-			AudioPlayer:  &audioplayer.AudioPlayer{},
-			AudioEntries: []audioplayer.AudioEntry{},
+			AudioPlayer:        &audioplayer.AudioPlayer{},
+			AudioEntries:       []models.AudioEntry{},
+			AudioEntriesUpdate: make(chan []models.AudioEntry),
 		},
 		ScribeConfig: ScribeConfig{
 			ScribeTextChan: make(chan string),

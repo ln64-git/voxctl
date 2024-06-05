@@ -6,7 +6,7 @@ import (
 	"github.com/charmbracelet/log"
 	"github.com/ln64-git/voxctl/external/azure"
 	"github.com/ln64-git/voxctl/external/ollama"
-	"github.com/ln64-git/voxctl/internal/audio/audioplayer"
+	"github.com/ln64-git/voxctl/internal/models"
 	"github.com/ln64-git/voxctl/internal/state"
 )
 
@@ -22,26 +22,26 @@ func ProcessChat(state *state.AppState, req *ollama.OllamaRequest) {
 	sentenceChan := make(chan string)
 	go segmentTextFromChannel(tokenChan, sentenceChan)
 
-	var audioEntry []audioplayer.AudioEntry
-	var fullText []string
-
-	go func() {
-		for sentence := range sentenceChan {
+	for sentence := range sentenceChan {
+		go func(sentence string) {
 			audioData, err := azure.SynthesizeSpeech(state.AzureConfig.SubscriptionKey, state.AzureConfig.Region, sentence, state.AzureConfig.VoiceGender, state.AzureConfig.VoiceName)
 			if err != nil {
 				log.Errorf("Failed to synthesize speech: %v", err)
 				return
 			}
-			fullText = append(fullText, sentence)
-			audioEntry = append(audioEntry, audioplayer.AudioEntry{
+
+			// Create a new audio entry for the sentence
+			audioEntry := models.AudioEntry{
 				AudioData:   audioData,
 				SegmentText: sentence,
-				FullText:    fullText,
+				FullText:    append([]string{}, sentence), // Copy the sentence to FullText
 				ChatQuery:   req.Prompt,
-			})
-			state.AudioConfig.AudioEntries = append(state.AudioConfig.AudioEntries, audioEntry...)
-		}
-	}()
+			}
+
+			// Send the audio entry to AudioEntriesUpdate channel
+			state.AudioConfig.AudioEntriesUpdate <- []models.AudioEntry{audioEntry}
+		}(sentence)
+	}
 }
 
 func segmentTextFromChannel(tokenChan <-chan string, sentenceChan chan<- string) {

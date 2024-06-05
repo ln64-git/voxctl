@@ -81,7 +81,7 @@ func StartServer(state *state.AppState) {
 	}
 
 	go scribe.ScribeText(state)
-	state.AudioConfig.AudioPlayer = audioplayer.NewAudioPlayer() // Initialize AudioPlayer with state
+	state.AudioConfig.AudioPlayer = audioplayer.NewAudioPlayer(state.AudioConfig.AudioEntriesUpdate)
 	state.AudioConfig.AudioPlayer.Start()
 }
 
@@ -156,7 +156,7 @@ func initializeSpeechRecognizer(state *state.AppState) {
 
 func HandleServerState(app_state *state.AppState) {
 	if !state.CheckServerRunning(app_state.ServerConfig.Port) {
-		app_state.AudioConfig.AudioPlayer = audioplayer.NewAudioPlayer()
+		// app_state.AudioConfig.AudioPlayer = audioplayer.NewAudioPlayer()
 		go StartServer(app_state)
 		time.Sleep(35 * time.Millisecond)
 	} else {

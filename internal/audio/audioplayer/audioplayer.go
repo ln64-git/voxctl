@@ -10,85 +10,80 @@ import (
 	"github.com/faiface/beep"
 	"github.com/faiface/beep/speaker"
 	"github.com/faiface/beep/wav"
+	"github.com/ln64-git/voxctl/internal/models"
 )
 
-type AudioEntry struct {
-	AudioData   []byte
-	SegmentText string
-	FullText    []string
-	ChatQuery   string
-}
-
 type AudioPlayer struct {
-	audioQueue      []AudioEntry
-	mutex           sync.Mutex
-	audioController *beep.Ctrl
-	doneChannel     chan struct{}
-	audioFormat     beep.Format
-	isAudioPlaying  bool
-	initialized     bool
+	mutex              sync.Mutex
+	audioController    *beep.Ctrl
+	doneChannel        chan struct{}
+	audioFormat        beep.Format
+	isAudioPlaying     bool
+	initialized        bool
+	audioEntriesUpdate chan []models.AudioEntry
 }
 
-func NewAudioPlayer() *AudioPlayer {
+func NewAudioPlayer(audioEntriesUpdate chan []models.AudioEntry) *AudioPlayer {
 	return &AudioPlayer{
-		audioQueue:  make([]AudioEntry, 0),
-		doneChannel: make(chan struct{}),
+		doneChannel:        make(chan struct{}),
+		audioEntriesUpdate: audioEntriesUpdate,
 	}
 }
-
 func (ap *AudioPlayer) Start() {
 	go func() {
+		var audioEntries []models.AudioEntry
 		for {
-			ap.playNextAudioEntry()
+			select {
+			case newEntries := <-ap.audioEntriesUpdate:
+				log.Info("New Entry added")
+				audioEntries = append(audioEntries, newEntries...)
+			default:
+				if len(audioEntries) > 0 {
+					ap.playNextAudioEntry(audioEntries)
+					audioEntries = audioEntries[1:]
+				} else {
+					time.Sleep(100 * time.Millisecond)
+				}
+			}
 		}
 	}()
 }
 
-func (ap *AudioPlayer) PlayAudioEntries(entries []AudioEntry) {
+func (ap *AudioPlayer) PlayAudioEntries(entries []models.AudioEntry) {
 	if ap == nil {
 		log.Error("AudioPlayer is nil")
 		return
 	}
-
 	defer func() {
 		if r := recover(); r != nil {
 			log.Errorf("Recovered from panic: %v", r)
 		}
 	}()
-
 	ap.mutex.Lock()
 	defer ap.mutex.Unlock()
-
-	ap.audioQueue = append(ap.audioQueue, entries...)
-
 	if !ap.isAudioPlaying {
 		ap.isAudioPlaying = true
 	}
 }
 
-func (ap *AudioPlayer) playNextAudioEntry() {
-	// log.Info("playNextAudioEntry called")
+func (ap *AudioPlayer) playNextAudioEntry(audioEntries []models.AudioEntry) {
 	ap.mutex.Lock()
+	defer ap.mutex.Unlock()
 
-	if len(ap.audioQueue) == 0 {
+	if len(audioEntries) == 0 {
 		ap.isAudioPlaying = false
-		ap.mutex.Unlock()
-		time.Sleep(100 * time.Millisecond)
 		return
 	}
 
-	entry := ap.audioQueue[0]
-	ap.audioQueue = ap.audioQueue[1:]
+	entry := audioEntries[0]
 
-	ap.mutex.Unlock()
-
+	log.Info("Current Entry is - ")
+	log.Info(entry.SegmentText)
 	audioReader := bytes.NewReader(entry.AudioData)
 	audioReadCloser := io.NopCloser(audioReader)
-
 	audioStreamer, format, err := wav.Decode(audioReadCloser)
 	if err != nil {
 		log.Errorf("Error decoding audio data: %v", err)
-		ap.playNextAudioEntry()
 		return
 	}
 	defer audioStreamer.Close()
@@ -98,23 +93,31 @@ func (ap *AudioPlayer) playNextAudioEntry() {
 		err = speaker.Init(ap.audioFormat.SampleRate, ap.audioFormat.SampleRate.N(time.Second/10))
 		if err != nil {
 			log.Errorf("Error initializing speaker: %v", err)
-			ap.playNextAudioEntry()
 			return
 		}
 		ap.initialized = true
 	}
 
 	ap.audioController = &beep.Ctrl{Streamer: audioStreamer, Paused: false}
-
 	var waitGroup sync.WaitGroup
 	waitGroup.Add(1)
-
 	speaker.Play(beep.Seq(ap.audioController, beep.Callback(func() {
 		waitGroup.Done()
 	})))
 
+	// Wait for the audio to finish playing
 	waitGroup.Wait()
-	ap.playNextAudioEntry()
+
+	// Remove the first entry from the slice to advance to the next one
+	audioEntries = audioEntries[1:]
+
+	// Continue playing the next audio entry if there are more
+	if len(audioEntries) > 0 {
+		ap.playNextAudioEntry(audioEntries)
+	} else {
+		// No more audio entries, mark as not playing
+		ap.isAudioPlaying = false
+	}
 }
 
 func (ap *AudioPlayer) Pause() {
@@ -149,7 +152,7 @@ func (ap *AudioPlayer) Stop() {
 		speaker.Unlock()
 	}
 
-	ap.audioQueue = nil
+	// ap.audioQueue = nil
 	ap.isAudioPlaying = false
 }
 
@@ -180,7 +183,7 @@ func (ap *AudioPlayer) Clear() {
 	ap.mutex.Lock()
 	defer ap.mutex.Unlock()
 
-	ap.audioQueue = nil
+	// ap.audioQueue = nil
 	ap.audioController = nil
 	ap.audioFormat = beep.Format{}
 	ap.isAudioPlaying = false
