@@ -16,19 +16,19 @@ func HandleConversation(state *state.AppState) {
 	switch strings.TrimSpace(state.SpeakText) {
 	case "stop":
 		state.AudioConfig.AudioPlayer.Stop()
-		log.Info("SpeakText - Stop -")
+		log.Info("HandleConversation - Stop -")
 		state.SpeakText = ""
 	case "pause":
 		state.AudioConfig.AudioPlayer.Pause()
-		log.Info("SpeakText - Pause -")
+		log.Info("HandleConversation - Pause -")
 		state.SpeakText = ""
 	case "resume":
 		state.AudioConfig.AudioPlayer.Resume()
-		log.Info("SpeakText - Resume -")
+		log.Info("HandleConversation - Resume -")
 		state.SpeakText = ""
 	case "clear":
 		state.AudioConfig.AudioPlayer.Clear()
-		log.Info("SpeakText - Clear -")
+		log.Info("HandleConversation - Clear -")
 		state.SpeakText = ""
 	default:
 		go func() {
@@ -43,7 +43,7 @@ func HandleConversation(state *state.AppState) {
 				return
 			}
 
-			log.Infof("SpeakText - %s -", state.SpeakText)
+			log.Infof("HandleConversation - %s -", state.SpeakText)
 			state.SpeakText = ""
 
 			req, err := http.NewRequest("POST", "http://localhost:"+strconv.Itoa(state.ServerConfig.Port)+"/chat", strings.NewReader(string(body)))

@@ -19,6 +19,7 @@ type AudioPlayer struct {
 	doneChannel        chan struct{}
 	audioFormat        beep.Format
 	initialized        bool
+	audioEntries       []models.AudioEntry
 	audioEntriesUpdate chan []models.AudioEntry
 }
 
@@ -28,39 +29,35 @@ func NewAudioPlayer(audioEntriesUpdate chan []models.AudioEntry) *AudioPlayer {
 		audioEntriesUpdate: audioEntriesUpdate,
 	}
 }
+
 func (ap *AudioPlayer) Start() {
 	go func() {
-		var audioEntries []models.AudioEntry
 		for {
 			select {
 			case newEntries := <-ap.audioEntriesUpdate:
-				log.Info("New Entry added")
-				audioEntries = append(audioEntries, newEntries...)
+				ap.mutex.Lock()
+				ap.audioEntries = append(ap.audioEntries, newEntries...)
+				ap.mutex.Unlock()
+				go ap.playNextAudioEntry()
 			default:
-				if len(audioEntries) > 0 {
-					ap.playNextAudioEntry(audioEntries)
-					audioEntries = audioEntries[1:]
-				} else {
-					time.Sleep(100 * time.Millisecond)
-				}
+				time.Sleep(100 * time.Millisecond)
 			}
 		}
 	}()
 }
 
-func (ap *AudioPlayer) playNextAudioEntry(audioEntries []models.AudioEntry) {
+func (ap *AudioPlayer) playNextAudioEntry() {
 	ap.mutex.Lock()
 	defer ap.mutex.Unlock()
 
-	if len(audioEntries) == 0 {
-		ap.audioController.Paused = false
+	if len(ap.audioEntries) == 0 {
 		return
 	}
 
-	entry := audioEntries[0]
+	entry := ap.audioEntries[0]
+	ap.audioEntries = ap.audioEntries[1:]
 
-	log.Info("playNextAudioEntry - Current Entry Playing is - ")
-	log.Infof(entry.SegmentText)
+	log.Infof("playNextAudioEntry - %s -", entry.SegmentText)
 
 	audioReader := bytes.NewReader(entry.AudioData)
 	audioReadCloser := io.NopCloser(audioReader)
@@ -91,12 +88,9 @@ func (ap *AudioPlayer) playNextAudioEntry(audioEntries []models.AudioEntry) {
 	// Wait for the audio to finish playing
 	waitGroup.Wait()
 
-	// Remove the first entry from the slice to advance to the next one
-	audioEntries = audioEntries[1:]
-
 	// Continue playing the next audio entry if there are more
-	if len(audioEntries) > 0 {
-		ap.playNextAudioEntry(audioEntries)
+	if len(ap.audioEntries) > 0 {
+		go ap.playNextAudioEntry()
 	} else {
 		// No more audio entries, mark as not playing
 		ap.audioController.Paused = false
