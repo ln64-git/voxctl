@@ -6,7 +6,6 @@ import (
 )
 
 // State struct to hold program state
-
 type AppState struct {
 	Port                  int
 	AudioPlayer           *player.AudioPlayer

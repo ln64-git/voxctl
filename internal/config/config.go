@@ -3,10 +3,27 @@ package config
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/user"
 	"path/filepath"
+
+	"github.com/sirupsen/logrus"
 )
+
+func LoadConfig(configName string) map[string]interface{} {
+	configData, err := ioutil.ReadFile(configName)
+	if err != nil {
+		logrus.Fatalf("Failed to load configuration: %v", err)
+	}
+
+	var configMap map[string]interface{}
+	if err := json.Unmarshal(configData, &configMap); err != nil {
+		logrus.Fatalf("Failed to unmarshal configuration: %v", err)
+	}
+
+	return configMap
+}
 
 // GetConfig retrieves the configuration from a JSON file in the user's home directory.
 func GetConfig(configName string) (map[string]interface{}, error) {

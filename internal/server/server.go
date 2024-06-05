@@ -149,11 +149,28 @@ func ConnectToServer(port int) (*http.Response, error) {
 	}
 	return resp, nil
 }
+
 func initializeSpeechRecognizer(state *types.AppState) {
 	recognizer, err := vosk.NewSpeechRecognizer(state.VoskModelPath)
 	if err != nil {
 		logrus.Errorf("Failed to initialize Vosk speech recognizer: %v", err)
 	} else {
 		state.SpeechRecognizer = recognizer // Assigning the pointer directly
+	}
+}
+
+func HandleServerState(state *types.AppState) {
+	if !CheckServerRunning(state.Port) {
+		state.AudioPlayer = player.NewAudioPlayer()
+		go StartServer(state)
+		time.Sleep(35 * time.Millisecond)
+	} else {
+		resp, err := ConnectToServer(state.Port)
+		if err != nil {
+			log.Errorf("Failed to connect to the existing server on port %d: %v", state.Port, err)
+		} else {
+			log.Infof("Connected to the existing server on port %d. Status: %s", state.Port, resp.Status)
+			resp.Body.Close()
+		}
 	}
 }
