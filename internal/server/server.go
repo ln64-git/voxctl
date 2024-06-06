@@ -87,9 +87,12 @@ func StartServer(state *state.AppState) {
 		}
 	}
 
+	// Start ScribeText in its own goroutine
 	go scribe.ScribeText(state)
+
+	// Initialize and start the AudioPlayer in its own goroutine
 	state.AudioConfig.AudioPlayer = audioplayer.NewAudioPlayer(state.AudioConfig.AudioEntriesUpdate)
-	state.AudioConfig.AudioPlayer.Start()
+	go state.AudioConfig.AudioPlayer.Start()
 }
 
 func handleAudioRequest(w http.ResponseWriter, r *http.Request, controlFunc func()) {
