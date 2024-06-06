@@ -31,6 +31,7 @@ type AudioPlayer struct {
 	audioEntriesUpdate chan []models.AudioEntry
 	controlChannel     chan ControlCommand
 	playing            bool
+	activeChatQuery    string
 }
 
 func NewAudioPlayer(audioEntriesUpdate chan []models.AudioEntry) *AudioPlayer {
@@ -81,6 +82,7 @@ func (ap *AudioPlayer) handleControlCommand(cmd ControlCommand) {
 		if ap.audioController != nil {
 			ap.audioController = nil
 			ap.playing = false
+			ap.audioEntries = []models.AudioEntry{} // Clear all entries when stopped
 		}
 	}
 }
@@ -95,6 +97,7 @@ func (ap *AudioPlayer) playNextAudioEntry() {
 
 	entry := ap.audioEntries[0]
 	ap.audioEntries = ap.audioEntries[1:]
+	ap.activeChatQuery = entry.ChatQuery
 	ap.mutex.Unlock()
 
 	log.Infof("playNextAudioEntry - %s -", entry.SegmentText)
@@ -162,6 +165,18 @@ func (ap *AudioPlayer) Resume() {
 
 func (ap *AudioPlayer) Stop() {
 	ap.controlChannel <- ControlStop
+	ap.mutex.Lock()
+	defer ap.mutex.Unlock()
+	if ap.audioController != nil {
+		ap.audioController.Paused = true
+		ap.audioController = nil
+	}
+	ap.audioEntries = []models.AudioEntry{}
+	ap.playing = false
+	ap.initialized = false
+	ap.activeChatQuery = ""
+	close(ap.doneChannel)
+	ap.doneChannel = make(chan struct{})
 }
 
 func (ap *AudioPlayer) Clear() {
@@ -178,4 +193,5 @@ func (ap *AudioPlayer) Clear() {
 
 	close(ap.doneChannel)
 	ap.doneChannel = make(chan struct{})
+	ap.activeChatQuery = ""
 }
