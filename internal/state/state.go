@@ -5,9 +5,9 @@ import (
 	"net"
 	"time"
 
-	"github.com/ln64-git/voxctl/config"
 	"github.com/ln64-git/voxctl/internal/audio/audioplayer"
 	"github.com/ln64-git/voxctl/internal/audio/vosk"
+	"github.com/ln64-git/voxctl/internal/config"
 	"github.com/ln64-git/voxctl/internal/flags"
 	"github.com/ln64-git/voxctl/internal/models"
 )

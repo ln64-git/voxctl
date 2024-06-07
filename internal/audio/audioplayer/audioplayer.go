@@ -155,7 +155,6 @@ func (ap *AudioPlayer) IsPlaying() bool {
 }
 
 func (ap *AudioPlayer) Pause() {
-	log.Info("AudioPlayer - Pause Called")
 	ap.controlChannel <- ControlPause
 }
 

@@ -9,10 +9,10 @@ import (
 	"time"
 
 	"github.com/charmbracelet/log"
-	"github.com/ln64-git/voxctl/api"
 	"github.com/ln64-git/voxctl/internal/audio/audioplayer"
 	"github.com/ln64-git/voxctl/internal/audio/vosk"
-	"github.com/ln64-git/voxctl/internal/function/scribe"
+	"github.com/ln64-git/voxctl/internal/features/scribe"
+	"github.com/ln64-git/voxctl/internal/handlers"
 	"github.com/ln64-git/voxctl/internal/state"
 	"github.com/sirupsen/logrus"
 )
@@ -31,19 +31,19 @@ func StartServer(state *state.AppState) {
 	initializeSpeechRecognizer(state)
 
 	http.HandleFunc("/scribe_start", func(w http.ResponseWriter, r *http.Request) {
-		api.HandleScribeStart(w, r, state)
+		handlers.HandleScribeStart(w, r, state)
 	})
 
 	http.HandleFunc("/scribe_stop", func(w http.ResponseWriter, r *http.Request) {
-		api.HandleScribeStop(w, r, state)
+		handlers.HandleScribeStop(w, r, state)
 	})
 
 	http.HandleFunc("/scribe_toggle", func(w http.ResponseWriter, r *http.Request) {
-		api.HandleScribeToggle(w, r, state)
+		handlers.HandleScribeToggle(w, r, state)
 	})
 
 	http.HandleFunc("/chat", func(w http.ResponseWriter, r *http.Request) {
-		api.HandleChatRequest(w, r, state)
+		handlers.HandleChatRequest(w, r, state)
 	})
 
 	http.HandleFunc("/status", func(w http.ResponseWriter, r *http.Request) {

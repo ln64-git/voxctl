@@ -1,9 +1,9 @@
-package api
+package handlers
 
 import (
 	"net/http"
 
-	"github.com/ln64-git/voxctl/internal/function/scribe"
+	"github.com/ln64-git/voxctl/internal/features/scribe"
 	"github.com/ln64-git/voxctl/internal/state"
 )
 

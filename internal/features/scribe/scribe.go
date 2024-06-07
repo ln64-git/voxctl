@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/log"
-	"github.com/ln64-git/voxctl/internal/function/convo"
+	"github.com/ln64-git/voxctl/internal/features/convo"
 	"github.com/ln64-git/voxctl/internal/state"
 	"github.com/sirupsen/logrus"
 )

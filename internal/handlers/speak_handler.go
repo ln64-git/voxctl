@@ -1,11 +1,11 @@
-package api
+package handlers
 
 import (
 	"encoding/json"
 	"net/http"
 
 	"github.com/charmbracelet/log"
-	"github.com/ln64-git/voxctl/internal/function/speak"
+	"github.com/ln64-git/voxctl/internal/features/speak"
 	"github.com/ln64-git/voxctl/internal/state"
 )
 

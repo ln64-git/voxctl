@@ -9,7 +9,7 @@ import (
 	"github.com/charmbracelet/log"
 	"github.com/ln64-git/voxctl/external/ollama"
 	"github.com/ln64-git/voxctl/internal/flags"
-	"github.com/ln64-git/voxctl/internal/function/speak"
+	"github.com/ln64-git/voxctl/internal/features/speak"
 	"github.com/ln64-git/voxctl/internal/server"
 	"github.com/ln64-git/voxctl/internal/state"
 	"github.com/sirupsen/logrus"

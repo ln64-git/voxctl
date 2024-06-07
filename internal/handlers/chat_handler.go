@@ -1,4 +1,4 @@
-package api
+package handlers
 
 import (
 	"encoding/json"
@@ -7,7 +7,7 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/ln64-git/voxctl/external/ollama"
-	"github.com/ln64-git/voxctl/internal/function/chat"
+	"github.com/ln64-git/voxctl/internal/features/chat"
 	"github.com/ln64-git/voxctl/internal/state"
 )
 

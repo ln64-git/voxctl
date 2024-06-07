@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/charmbracelet/log"
-	"github.com/ln64-git/voxctl/config"
+	"github.com/ln64-git/voxctl/internal/config"
 	"github.com/ln64-git/voxctl/internal/flags"
 	"github.com/ln64-git/voxctl/internal/request"
 	"github.com/ln64-git/voxctl/internal/server"
