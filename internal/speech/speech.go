@@ -39,7 +39,7 @@ func (r SpeechRequest) SpeechRequestToJSON() string {
 func ProcessSpeech(req SpeechRequest, state types.AppState) error {
 	sanitizedText := SanitizeInput(req.Text)
 	segments := getSegmentedText(sanitizedText)
-	if state.ElevenLabsSubscriptionKey != "" {
+	if state.VoiceService == "ElevenLabs" {
 		for _, segment := range segments {
 			audioData, err := elevenLabs.SynthesizeSpeech(state.ElevenLabsSubscriptionKey, state.ElevenLabsRegion, segment, state.ElevenLabsGender, state.ElevenLabsVoice)
 			if err != nil {
@@ -49,7 +49,7 @@ func ProcessSpeech(req SpeechRequest, state types.AppState) error {
 			state.AudioPlayer.Play(audioData)
 			log.Infof("Speech processed: %s", segment) // Example log message
 		}
-	} else if state.AzureSubscriptionKey != "" {
+	} else if state.VoiceService == "Azure" {
 		for _, segment := range segments {
 			audioData, err := azure.SynthesizeSpeech(state.AzureSubscriptionKey, state.AzureRegion, segment, state.AzureVoiceGender, state.AzureVoiceName)
 			if err != nil {

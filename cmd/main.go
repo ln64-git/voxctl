@@ -39,18 +39,25 @@ func main() {
 
 	// Populate state from configuration
 	state := types.AppState{
-		ClientPort:                *flagPort,
-		ClientInput:               *flagInput,
-		ServerStatusRequested:     *flagStatus,
-		ServerQuitRequested:       *flagQuit,
-		ServerPauseRequested:      *flagPause,
-		ServerStopRequested:       *flagStop,
+		ClientPort:            *flagPort,
+		ClientInput:           *flagInput,
+		ServerStatusRequested: *flagStatus,
+		ServerQuitRequested:   *flagQuit,
+		ServerPauseRequested:  *flagPause,
+		ServerStopRequested:   *flagStop,
+
+		VoiceService:              config.GetStringOrDefault(configData, "VoiceService", ""),
 		ElevenLabsSubscriptionKey: config.GetStringOrDefault(configData, "ElevenLabsKey", ""),
-		AzureSubscriptionKey:      config.GetStringOrDefault(configData, "AzureSubscriptionKey", ""),
-		AzureRegion:               config.GetStringOrDefault(configData, "AzureRegion", "eastus"),
-		AzureVoiceGender:          config.GetStringOrDefault(configData, "AzureVoiceGender", "Female"),
-		AzureVoiceName:            config.GetStringOrDefault(configData, "AzureVoiceName", "en-US-JennyNeural"),
-		ServerAlreadyRunning:      server.CheckServerRunning(*flagPort),
+		ElevenLabsRegion:          config.GetStringOrDefault(configData, "ElevenLabsRegion", ""),
+		ElevenLabsGender:          config.GetStringOrDefault(configData, "ElevenLabsGender", ""),
+		ElevenLabsVoice:           config.GetStringOrDefault(configData, "ElevenLabsVoice", ""),
+
+		AzureSubscriptionKey: config.GetStringOrDefault(configData, "AzureSubscriptionKey", ""),
+		AzureRegion:          config.GetStringOrDefault(configData, "AzureRegion", "eastus"),
+		AzureVoiceGender:     config.GetStringOrDefault(configData, "AzureVoiceGender", "Female"),
+		AzureVoiceName:       config.GetStringOrDefault(configData, "AzureVoiceName", "en-US-JennyNeural"),
+
+		ServerAlreadyRunning: server.CheckServerRunning(*flagPort),
 	}
 
 	// Check if server is already running

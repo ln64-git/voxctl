@@ -35,6 +35,7 @@ func StartServer(state types.AppState) {
 			return
 		}
 
+
 		err = speech.ProcessSpeech(*inputReq, state)
 		if err != nil {
 			log.Errorf("%v", err)

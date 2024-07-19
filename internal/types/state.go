@@ -12,6 +12,7 @@ type AppState struct {
 	ServerQuitRequested       bool
 	ServerPauseRequested      bool
 	ServerStopRequested       bool
+	VoiceService              string
 	ElevenLabsSubscriptionKey string
 	ElevenLabsRegion          string
 	ElevenLabsGender          string
