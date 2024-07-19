@@ -16,7 +16,7 @@ import (
 )
 
 func StartServer(state types.AppState) {
-	port := state.Port
+	port := state.ClientPort
 	log.Infof("Starting server on port %d", port)
 
 	http.HandleFunc("/status", func(w http.ResponseWriter, r *http.Request) {

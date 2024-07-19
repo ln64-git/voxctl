@@ -1,12 +1,9 @@
 package main
 
 import (
-	"bufio"
 	"bytes"
-	"encoding/json"
 	"flag"
 	"fmt"
-	"io"
 	"net/http"
 	"os"
 	"os/signal"
@@ -26,7 +23,6 @@ func main() {
 
 	// Parse command-line flags
 	flagPort := flag.Int("port", 8080, "Port number to connect or serve")
-	flagToken := flag.String("token", "", "Process input stream token")
 	flagInput := flag.String("input", "", "Input text to play")
 	flagStatus := flag.Bool("status", false, "Request info")
 	flagQuit := flag.Bool("quit", false, "Exit application after request")
@@ -43,37 +39,37 @@ func main() {
 
 	// Populate state from configuration
 	state := types.AppState{
-		Port:                 *flagPort,
-		Token:                *flagToken,
-		Input:                *flagInput,
-		StatusRequested:      *flagStatus,
-		QuitRequested:        *flagQuit,
-		PauseRequested:       *flagPause,
-		StopRequested:        *flagStop,
-		AzureSubscriptionKey: config.GetStringOrDefault(configData, "AzureSubscriptionKey", ""),
-		AzureRegion:          config.GetStringOrDefault(configData, "AzureRegion", "eastus"),
-		VoiceGender:          config.GetStringOrDefault(configData, "VoiceGender", "Female"),
-		VoiceName:            config.GetStringOrDefault(configData, "VoiceName", "en-US-JennyNeural"),
-		ServerAlreadyRunning: server.CheckServerRunning(*flagPort),
+		ClientPort: *flagPort,
+		// Token:                 *flagToken,
+		ClientInput:           *flagInput,
+		ServerStatusRequested: *flagStatus,
+		ServerQuitRequested:   *flagQuit,
+		ServerPauseRequested:  *flagPause,
+		ServerStopRequested:   *flagStop,
+		AzureSubscriptionKey:  config.GetStringOrDefault(configData, "AzureSubscriptionKey", ""),
+		AzureRegion:           config.GetStringOrDefault(configData, "AzureRegion", "eastus"),
+		AzureVoiceGender:      config.GetStringOrDefault(configData, "VoiceGender", "Female"),
+		AzureVoiceName:        config.GetStringOrDefault(configData, "VoiceName", "en-US-JennyNeural"),
+		ServerAlreadyRunning:  server.CheckServerRunning(*flagPort),
 	}
 
 	// Check if server is already running
-	if !server.CheckServerRunning(state.Port) {
+	if !server.CheckServerRunning(state.ClientPort) {
 		state.AudioPlayer = audio.NewAudioPlayer()
 		go server.StartServer(state)
 		time.Sleep(35 * time.Millisecond)
 	} else {
-		resp, err := server.ConnectToServer(state.Port)
+		resp, err := server.ConnectToServer(state.ClientPort)
 		if err != nil {
-			log.Errorf("Failed to connect to the existing server on port %d: %v", state.Port, err)
+			log.Errorf("Failed to connect to the existing server on port %d: %v", state.ClientPort, err)
 		} else {
-			log.Infof("Connected to the existing server on port %d. Status: %s", state.Port, resp.Status)
+			log.Infof("Connected to the existing server on port %d. Status: %s", state.ClientPort, resp.Status)
 			resp.Body.Close()
 		}
 	}
 
 	processRequest(state)
-	if state.QuitRequested {
+	if state.ServerQuitRequested {
 		log.Info("Quit flag requested, Program Exiting")
 		return
 	}
@@ -89,75 +85,36 @@ func processRequest(state types.AppState) {
 	client := &http.Client{}
 
 	switch {
-	case state.StatusRequested:
-		resp, err := client.Get(fmt.Sprintf("http://localhost:%d/status", state.Port))
+	case state.ServerStatusRequested:
+		resp, err := client.Get(fmt.Sprintf("http://localhost:%d/status", state.ClientPort))
 		if err != nil {
 			return
 		}
 		defer resp.Body.Close()
 
-	case state.Input != "":
+	case state.ClientInput != "":
 		// log.Info(state.Input)
 		speechReq := speech.SpeechRequest{
-			Text:      state.Input,
-			Gender:    state.VoiceGender,
-			VoiceName: state.VoiceName,
+			Text:      state.ClientInput,
+			Gender:    state.AzureVoiceGender,
+			VoiceName: state.AzureVoiceName,
 		}
 		body := bytes.NewBufferString(speechReq.SpeechRequestToJSON())
-		resp, err := client.Post(fmt.Sprintf("http://localhost:%d/input", state.Port), "application/json", body)
+		resp, err := client.Post(fmt.Sprintf("http://localhost:%d/input", state.ClientPort), "application/json", body)
 		if err != nil {
 			return
 		}
 		defer resp.Body.Close()
 
-	case state.PauseRequested:
-		resp, err := client.Post(fmt.Sprintf("http://localhost:%d/pause", state.Port), "", nil)
+	case state.ServerPauseRequested:
+		resp, err := client.Post(fmt.Sprintf("http://localhost:%d/pause", state.ClientPort), "", nil)
 		if err != nil {
 			return
 		}
 		defer resp.Body.Close()
 
-	case state.StopRequested:
-		resp, err := client.Post(fmt.Sprintf("http://localhost:%d/stop", state.Port), "", nil)
-		if err != nil {
-			return
-		}
-		defer resp.Body.Close()
-
-	case state.Token != "":
-		pipeReader, pipeWriter := io.Pipe()
-		go func() {
-			defer pipeWriter.Close()
-			scanner := bufio.NewScanner(os.Stdin)
-			for scanner.Scan() {
-				line := scanner.Text()
-				var resp types.OllamaResponse
-				err := json.Unmarshal([]byte(line), &resp)
-				if err != nil {
-					continue
-				}
-				if resp.Done {
-					break
-				}
-				_, err = pipeWriter.Write([]byte(resp.Response))
-				if err != nil {
-					break
-				}
-			}
-		}()
-
-		tokenText, err := io.ReadAll(pipeReader)
-		if err != nil {
-			return
-		}
-
-		tokenReq := speech.SpeechRequest{
-			Text:      string(tokenText),
-			Gender:    state.VoiceGender,
-			VoiceName: state.VoiceName,
-		}
-		body := bytes.NewBufferString(tokenReq.SpeechRequestToJSON())
-		resp, err := client.Post(fmt.Sprintf("http://localhost:%d/token", state.Port), "application/json", body)
+	case state.ServerStopRequested:
+		resp, err := client.Post(fmt.Sprintf("http://localhost:%d/stop", state.ClientPort), "", nil)
 		if err != nil {
 			return
 		}
