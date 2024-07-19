@@ -39,18 +39,18 @@ func main() {
 
 	// Populate state from configuration
 	state := types.AppState{
-		ClientPort: *flagPort,
-		// Token:                 *flagToken,
-		ClientInput:           *flagInput,
-		ServerStatusRequested: *flagStatus,
-		ServerQuitRequested:   *flagQuit,
-		ServerPauseRequested:  *flagPause,
-		ServerStopRequested:   *flagStop,
-		AzureSubscriptionKey:  config.GetStringOrDefault(configData, "AzureSubscriptionKey", ""),
-		AzureRegion:           config.GetStringOrDefault(configData, "AzureRegion", "eastus"),
-		AzureVoiceGender:      config.GetStringOrDefault(configData, "VoiceGender", "Female"),
-		AzureVoiceName:        config.GetStringOrDefault(configData, "VoiceName", "en-US-JennyNeural"),
-		ServerAlreadyRunning:  server.CheckServerRunning(*flagPort),
+		ClientPort:                *flagPort,
+		ClientInput:               *flagInput,
+		ServerStatusRequested:     *flagStatus,
+		ServerQuitRequested:       *flagQuit,
+		ServerPauseRequested:      *flagPause,
+		ServerStopRequested:       *flagStop,
+		ElevenLabsSubscriptionKey: config.GetStringOrDefault(configData, "ElevenLabsKey", ""),
+		AzureSubscriptionKey:      config.GetStringOrDefault(configData, "AzureSubscriptionKey", ""),
+		AzureRegion:               config.GetStringOrDefault(configData, "AzureRegion", "eastus"),
+		AzureVoiceGender:          config.GetStringOrDefault(configData, "AzureVoiceGender", "Female"),
+		AzureVoiceName:            config.GetStringOrDefault(configData, "AzureVoiceName", "en-US-JennyNeural"),
+		ServerAlreadyRunning:      server.CheckServerRunning(*flagPort),
 	}
 
 	// Check if server is already running
@@ -95,9 +95,7 @@ func processRequest(state types.AppState) {
 	case state.ClientInput != "":
 		// log.Info(state.Input)
 		speechReq := speech.SpeechRequest{
-			Text:      state.ClientInput,
-			Gender:    state.AzureVoiceGender,
-			VoiceName: state.AzureVoiceName,
+			Text: state.ClientInput,
 		}
 		body := bytes.NewBufferString(speechReq.SpeechRequestToJSON())
 		resp, err := client.Post(fmt.Sprintf("http://localhost:%d/input", state.ClientPort), "application/json", body)

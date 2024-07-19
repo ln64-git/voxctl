@@ -7,14 +7,13 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/ln64-git/voxctl/external/azure"
-	"github.com/ln64-git/voxctl/internal/audio"
+	"github.com/ln64-git/voxctl/external/elevenLabs"
+	"github.com/ln64-git/voxctl/internal/types"
 )
 
 // SpeechRequest represents a request to synthesize speech.
 type SpeechRequest struct {
-	Text      string `json:"text"`
-	Gender    string `json:"gender"`
-	VoiceName string `json:"voiceName"`
+	Text string `json:"text"`
 }
 
 // SanitizeInput removes unwanted characters from a string.
@@ -33,21 +32,35 @@ func SanitizeInput(input string) string {
 // SpeechRequestToJSON converts a SpeechRequest to a JSON string.
 func (r SpeechRequest) SpeechRequestToJSON() string {
 	sanitizedText := SanitizeInput(r.Text)
-	return fmt.Sprintf(`{"text":"%s","gender":"%s","voiceName":"%s"}`, sanitizedText, r.Gender, r.VoiceName)
+	return fmt.Sprintf(`{"text":"%s"}`, sanitizedText)
 }
 
 // ProcessSpeech processes the speech request by synthesizing and playing the speech.
-func ProcessSpeech(req SpeechRequest, azureSubscriptionKey, azureRegion string, audioPlayer *audio.AudioPlayer) error {
+func ProcessSpeech(req SpeechRequest, state types.AppState) error {
 	sanitizedText := SanitizeInput(req.Text)
 	segments := getSegmentedText(sanitizedText)
-	for _, segment := range segments {
-		audioData, err := azure.SynthesizeSpeech(azureSubscriptionKey, azureRegion, segment, req.Gender, req.VoiceName)
-		if err != nil {
-			log.Errorf("%s", err)
-			return err
+	if state.ElevenLabsSubscriptionKey != "" {
+		for _, segment := range segments {
+			audioData, err := elevenLabs.SynthesizeSpeech(state.ElevenLabsSubscriptionKey, state.ElevenLabsRegion, segment, state.ElevenLabsGender, state.ElevenLabsVoice)
+			if err != nil {
+				log.Errorf("%s", err)
+				return err
+			}
+			state.AudioPlayer.Play(audioData)
+			log.Infof("Speech processed: %s", segment) // Example log message
 		}
-		audioPlayer.Play(audioData)
-		log.Infof("Speech processed: %s", segment) // Example log message
+	} else if state.AzureSubscriptionKey != "" {
+		for _, segment := range segments {
+			audioData, err := azure.SynthesizeSpeech(state.AzureSubscriptionKey, state.AzureRegion, segment, state.AzureVoiceGender, state.AzureVoiceName)
+			if err != nil {
+				log.Errorf("%s", err)
+				return err
+			}
+			state.AudioPlayer.Play(audioData)
+			log.Infof("Speech processed: %s", segment) // Example log message
+		}
+	} else {
+		log.Info("No Subscription Key found in ~/voxctl.json")
 	}
 	return nil
 }

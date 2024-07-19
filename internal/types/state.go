@@ -6,18 +6,22 @@ import (
 
 // State struct to hold program state
 type AppState struct {
-	ClientPort            int
-	ClientInput           string
-	ServerStatusRequested bool
-	ServerQuitRequested   bool
-	ServerPauseRequested  bool
-	ServerStopRequested   bool
-	AzureSubscriptionKey  string
-	AzureRegion           string
-	AzureVoiceGender      string
-	AzureVoiceName        string
-	AudioPlayer           *audio.AudioPlayer
-	ServerAlreadyRunning  bool
+	ClientPort                int
+	ClientInput               string
+	ServerStatusRequested     bool
+	ServerQuitRequested       bool
+	ServerPauseRequested      bool
+	ServerStopRequested       bool
+	ElevenLabsSubscriptionKey string
+	ElevenLabsRegion          string
+	ElevenLabsGender          string
+	ElevenLabsVoice           string
+	AzureSubscriptionKey      string
+	AzureRegion               string
+	AzureVoiceGender          string
+	AzureVoiceName            string
+	AudioPlayer               *audio.AudioPlayer
+	ServerAlreadyRunning      bool
 }
 
 type SpeechRequest struct {

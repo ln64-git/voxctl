@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/charmbracelet/log"
-	"github.com/ln64-git/voxctl/external/azure"
 	"github.com/ln64-git/voxctl/internal/speech"
 	"github.com/ln64-git/voxctl/internal/types"
 )
@@ -36,43 +35,10 @@ func StartServer(state types.AppState) {
 			return
 		}
 
-		err = speech.ProcessSpeech(*inputReq, state.AzureSubscriptionKey, state.AzureRegion, state.AudioPlayer)
+		err = speech.ProcessSpeech(*inputReq, state)
 		if err != nil {
 			log.Errorf("%v", err)
 			return
-		}
-
-		w.WriteHeader(http.StatusOK)
-	})
-
-	http.HandleFunc("/token", func(w http.ResponseWriter, r *http.Request) {
-		tokenReq, err := processSpeechRequest(r)
-		if err != nil {
-			log.Errorf("%v", err)
-			return
-		}
-
-		var sentences []string
-		var currentSentence string
-		for i, char := range tokenReq.Text {
-			if char == ',' || char == '.' || char == '!' || char == '?' {
-				sentences = append(sentences, currentSentence)
-				currentSentence = ""
-			} else {
-				currentSentence += string(char)
-				if i == len(tokenReq.Text)-1 {
-					sentences = append(sentences, currentSentence)
-				}
-			}
-		}
-
-		for _, sentence := range sentences {
-			audioData, err := azure.SynthesizeSpeech(state.AzureSubscriptionKey, state.AzureRegion, sentence, tokenReq.Gender, tokenReq.VoiceName)
-			if err != nil {
-				log.Errorf("%v", err)
-				return
-			}
-			state.AudioPlayer.Play(audioData)
 		}
 
 		w.WriteHeader(http.StatusOK)
