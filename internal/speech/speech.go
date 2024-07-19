@@ -1,4 +1,3 @@
-// speech/speech.go
 package speech
 
 import (
@@ -39,28 +38,35 @@ func (r SpeechRequest) SpeechRequestToJSON() string {
 func ProcessSpeech(req SpeechRequest, state types.AppState) error {
 	sanitizedText := SanitizeInput(req.Text)
 	segments := getSegmentedText(sanitizedText)
+
 	if state.VoiceService == "ElevenLabs" {
 		for _, segment := range segments {
-			audioData, err := elevenLabs.SynthesizeSpeech(state.ElevenLabsSubscriptionKey, state.ElevenLabsRegion, segment, state.ElevenLabsGender, state.ElevenLabsVoice)
+			voiceSettings := elevenLabs.VoiceSettings{
+				Stability:       state.ElevenLabsVoiceStability,
+				SimilarityBoost: state.ElevenLabsVoiceSimilarityBoost,
+				Style:           state.ElevenLabsVoiceStyle,
+				UseSpeakerBoost: state.ElevenLabsVoiceUseSpeakerBoost,
+			}
+			audioData, err := elevenLabs.SynthesizeSpeech(state.ElevenLabsSubscriptionKey, state.ElevenLabsVoiceModelID, segment, voiceSettings)
 			if err != nil {
-				log.Errorf("%s", err)
+				log.Errorf("Failed to synthesize speech with ElevenLabs: %v", err)
 				return err
 			}
 			state.AudioPlayer.Play(audioData)
-			log.Infof("Speech processed: %s", segment) // Example log message
+			log.Infof("Speech processed: %s", segment)
 		}
 	} else if state.VoiceService == "Azure" {
 		for _, segment := range segments {
 			audioData, err := azure.SynthesizeSpeech(state.AzureSubscriptionKey, state.AzureRegion, segment, state.AzureVoiceGender, state.AzureVoiceName)
 			if err != nil {
-				log.Errorf("%s", err)
+				log.Errorf("Failed to synthesize speech with Azure: %v", err)
 				return err
 			}
 			state.AudioPlayer.Play(audioData)
-			log.Infof("Speech processed: %s", segment) // Example log message
+			log.Infof("Speech processed: %s", segment)
 		}
 	} else {
-		log.Info("No Subscription Key found in ~/voxctl.json")
+		log.Info("No valid VoiceService found in state")
 	}
 	return nil
 }

@@ -3,9 +3,11 @@ package config
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"os/user"
 	"path/filepath"
+	"strconv"
 )
 
 // GetConfig retrieves the configuration from a JSON file in the user's home directory.
@@ -52,6 +54,32 @@ func GetStringOrDefault(cfg map[string]interface{}, key string, defaultValue str
 	if value, ok := cfg[key]; ok {
 		if strValue, ok := value.(string); ok {
 			return strValue
+		}
+	}
+	return defaultValue
+}
+
+// GetBoolOrDefault retrieves a boolean value from the configuration map, or returns a default value if the key is not present or the value is not a boolean.
+func GetBoolOrDefault(cfg map[string]interface{}, key string, defaultValue bool) bool {
+	if value, ok := cfg[key]; ok {
+		if boolValue, ok := value.(bool); ok {
+			return boolValue
+		}
+	}
+	return defaultValue
+}
+
+func GetFloat64OrDefault(configData map[string]interface{}, key string, defaultValue float64) float64 {
+	if value, exists := configData[key]; exists {
+		switch v := value.(type) {
+		case float64:
+			return v
+		case string:
+			if floatValue, err := strconv.ParseFloat(v, 64); err == nil {
+				return floatValue
+			}
+		default:
+			log.Printf("Warning: Key %s is not a float64 or string. Using default value.", key)
 		}
 	}
 	return defaultValue

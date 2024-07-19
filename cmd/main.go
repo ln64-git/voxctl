@@ -20,7 +20,6 @@ import (
 )
 
 func main() {
-
 	// Parse command-line flags
 	flagPort := flag.Int("port", 8080, "Port number to connect or serve")
 	flagInput := flag.String("input", "", "Input text to play")
@@ -46,11 +45,13 @@ func main() {
 		ServerPauseRequested:  *flagPause,
 		ServerStopRequested:   *flagStop,
 
-		VoiceService:              config.GetStringOrDefault(configData, "VoiceService", ""),
-		ElevenLabsSubscriptionKey: config.GetStringOrDefault(configData, "ElevenLabsKey", ""),
-		ElevenLabsRegion:          config.GetStringOrDefault(configData, "ElevenLabsRegion", ""),
-		ElevenLabsGender:          config.GetStringOrDefault(configData, "ElevenLabsGender", ""),
-		ElevenLabsVoice:           config.GetStringOrDefault(configData, "ElevenLabsVoice", ""),
+		VoiceService:                   config.GetStringOrDefault(configData, "VoiceService", ""),
+		ElevenLabsSubscriptionKey:      config.GetStringOrDefault(configData, "ElevenLabsSubscriptionKey", ""),
+		ElevenLabsVoiceModelID:         config.GetStringOrDefault(configData, "ElevenLabsVoiceModelID", ""),
+		ElevenLabsVoiceStability:       config.GetFloat64OrDefault(configData, "ElevenLabsVoiceStability", 0.5),
+		ElevenLabsVoiceSimilarityBoost: config.GetFloat64OrDefault(configData, "ElevenLabsVoiceSimilarityBoost", 0.5),
+		ElevenLabsVoiceStyle:           config.GetFloat64OrDefault(configData, "ElevenLabsVoiceStyle", 0.5),
+		ElevenLabsVoiceUseSpeakerBoost: config.GetBoolOrDefault(configData, "ElevenLabsVoiceUseSpeakerBoost", false),
 
 		AzureSubscriptionKey: config.GetStringOrDefault(configData, "AzureSubscriptionKey", ""),
 		AzureRegion:          config.GetStringOrDefault(configData, "AzureRegion", "eastus"),
