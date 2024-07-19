@@ -8,6 +8,7 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/faiface/beep"
+	"github.com/faiface/beep/mp3"
 	"github.com/faiface/beep/speaker"
 	"github.com/faiface/beep/wav"
 )
@@ -56,9 +57,8 @@ func (ap *AudioPlayer) playNextAudioChunk() {
 	defer ap.mutex.Unlock()
 
 	if len(ap.audioQueue) == 0 {
-		// Entire queue is finished, signal completion
 		ap.isAudioPlaying = false
-		close(ap.doneChannel) // Close the doneChannel to signal completion
+		close(ap.doneChannel)
 		return
 	}
 
@@ -68,7 +68,17 @@ func (ap *AudioPlayer) playNextAudioChunk() {
 	audioReader := bytes.NewReader(audioData)
 	audioReadCloser := io.NopCloser(audioReader)
 
-	audioStreamer, format, err := wav.Decode(audioReadCloser)
+	// Determine the format of the audio data
+	var audioStreamer beep.StreamSeekCloser
+	var format beep.Format
+	var err error
+
+	if isWAV(audioData) {
+		audioStreamer, format, err = wav.Decode(audioReadCloser)
+	} else {
+		audioStreamer, format, err = mp3.Decode(audioReadCloser)
+	}
+
 	if err != nil {
 		log.Errorf("Error decoding audio data: %v", err)
 		ap.playNextAudioChunkIfAvailable()
@@ -151,11 +161,14 @@ func (ap *AudioPlayer) WaitForCompletion() {
 	ap.mutex.Lock()
 	defer ap.mutex.Unlock()
 
-	// Check if audio is already finished
 	if !ap.isAudioPlaying {
 		return
 	}
 
-	// Wait on the done channel to signal completion
 	<-ap.doneChannel
+}
+
+// isWAV checks if the audio data is in WAV format.
+func isWAV(data []byte) bool {
+	return len(data) >= 4 && string(data[:4]) == "RIFF"
 }
