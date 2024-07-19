@@ -7,6 +7,7 @@ import (
 	"github.com/charmbracelet/log"
 	"github.com/ln64-git/voxctl/external/azure"
 	"github.com/ln64-git/voxctl/external/elevenLabs"
+	"github.com/ln64-git/voxctl/external/google"
 	"github.com/ln64-git/voxctl/internal/types"
 )
 
@@ -60,6 +61,16 @@ func ProcessSpeech(req SpeechRequest, state types.AppState) error {
 			audioData, err := azure.SynthesizeSpeech(state.AzureSubscriptionKey, state.AzureRegion, segment, state.AzureVoiceGender, state.AzureVoiceName)
 			if err != nil {
 				log.Errorf("Failed to synthesize speech with Azure: %v", err)
+				return err
+			}
+			state.AudioPlayer.Play(audioData)
+			log.Infof("Speech processed: %s", segment)
+		}
+	} else if state.VoiceService == "Google" {
+		for _, segment := range segments {
+			audioData, err := google.SynthesizeSpeech(state.GoogleSubscriptionKey, segment, state.GoogleLanguageCode, state.GoogleVoiceName)
+			if err != nil {
+				log.Errorf("Failed to synthesize speech with Google: %v", err)
 				return err
 			}
 			state.AudioPlayer.Play(audioData)

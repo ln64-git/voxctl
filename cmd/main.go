@@ -47,7 +47,7 @@ func main() {
 
 		VoiceService:                   config.GetStringOrDefault(configData, "VoiceService", ""),
 		ElevenLabsSubscriptionKey:      config.GetStringOrDefault(configData, "ElevenLabsSubscriptionKey", ""),
-		ElevenLabsVoiceModelID:         config.GetStringOrDefault(configData, "ElevenLabsVoiceModelID", ""),
+		ElevenLabsVoiceModelID:         config.GetStringOrDefault(configData, "ElevenLabsVoiceModelID", "eleven_monolingual_v1"),
 		ElevenLabsVoiceStability:       config.GetFloat64OrDefault(configData, "ElevenLabsVoiceStability", 0.5),
 		ElevenLabsVoiceSimilarityBoost: config.GetFloat64OrDefault(configData, "ElevenLabsVoiceSimilarityBoost", 0.5),
 		ElevenLabsVoiceStyle:           config.GetFloat64OrDefault(configData, "ElevenLabsVoiceStyle", 0.5),
@@ -57,6 +57,10 @@ func main() {
 		AzureRegion:          config.GetStringOrDefault(configData, "AzureRegion", "eastus"),
 		AzureVoiceGender:     config.GetStringOrDefault(configData, "AzureVoiceGender", "Female"),
 		AzureVoiceName:       config.GetStringOrDefault(configData, "AzureVoiceName", "en-US-JennyNeural"),
+
+		GoogleSubscriptionKey: config.GetStringOrDefault(configData, "GoogleSubscriptionKey", ""),
+		GoogleLanguageCode:    config.GetStringOrDefault(configData, "GoogleLanguageCode", "en-US"),
+		GoogleVoiceName:       config.GetStringOrDefault(configData, "GoogleVoiceName", "en-US-Wavenet-D"),
 
 		ServerAlreadyRunning: server.CheckServerRunning(*flagPort),
 	}

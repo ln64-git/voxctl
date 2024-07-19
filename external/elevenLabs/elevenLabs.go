@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-
-	"github.com/charmbracelet/log"
 )
 
 const (
@@ -39,10 +37,6 @@ type SynthesizeRequest struct {
 }
 
 func SynthesizeSpeech(subscriptionKey, voiceID, text string, voiceSettings VoiceSettings) ([]byte, error) {
-	log.Infof("subscriptionKey: %s", subscriptionKey)
-	log.Infof("voiceID: %s", voiceID)
-	log.Infof("text: %s", text)
-	log.Infof("voiceSettings: %+v", voiceSettings)
 
 	requestBody := SynthesizeRequest{
 		Text:          text,

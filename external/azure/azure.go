@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-
-	"github.com/charmbracelet/log"
 )
 
 const (
@@ -14,13 +12,6 @@ const (
 )
 
 func SynthesizeSpeech(subscriptionKey, region, text, voiceGender, voiceName string) ([]byte, error) {
-
-	log.Info("subscriptionKey: ", subscriptionKey)
-	log.Info("region: ", region)
-	log.Info("text: ", text)
-	log.Info("voiceGender: ", voiceGender)
-	log.Info("voiceName: ", voiceName)
-
 	ssml := generateSSML(text, voiceGender, voiceName)
 
 	url := fmt.Sprintf(apiEndpoint, region)
