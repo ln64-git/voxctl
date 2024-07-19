@@ -3,144 +3,115 @@ package server
 import (
 	"encoding/json"
 	"fmt"
+	"io"
+	"net"
 	"net/http"
-	"os"
 	"strconv"
 	"time"
 
 	"github.com/charmbracelet/log"
-	"github.com/ln64-git/voxctl/internal/audio/audioplayer"
-	"github.com/ln64-git/voxctl/internal/audio/vosk"
-	"github.com/ln64-git/voxctl/internal/features/scribe"
-	"github.com/ln64-git/voxctl/internal/handlers"
-	"github.com/ln64-git/voxctl/internal/state"
-	"github.com/sirupsen/logrus"
+	"github.com/ln64-git/voxctl/external/azure"
+	"github.com/ln64-git/voxctl/internal/speech"
+	"github.com/ln64-git/voxctl/internal/types"
 )
 
-// AppStatus holds the status of the application server
-type AppStatus struct {
-	Port                 int  `json:"port"`
-	ServerAlreadyRunning bool `json:"serverAlreadyRunning"`
-	ScribeStatus         bool `json:"toggleSpeechStatus"`
-}
-
-func StartServer(state *state.AppState) {
-	port := state.ServerConfig.Port
+func StartServer(state types.AppState) {
+	port := state.Port
 	log.Infof("Starting server on port %d", port)
 
-	initializeSpeechRecognizer(state)
-
-	http.HandleFunc("/scribe_start", func(w http.ResponseWriter, r *http.Request) {
-		handlers.HandleScribeStart(w, r, state)
-	})
-
-	http.HandleFunc("/scribe_stop", func(w http.ResponseWriter, r *http.Request) {
-		handlers.HandleScribeStop(w, r, state)
-	})
-
-	http.HandleFunc("/scribe_toggle", func(w http.ResponseWriter, r *http.Request) {
-		handlers.HandleScribeToggle(w, r, state)
-	})
-
-	http.HandleFunc("/chat", func(w http.ResponseWriter, r *http.Request) {
-		handlers.HandleChatRequest(w, r, state)
-	})
-
 	http.HandleFunc("/status", func(w http.ResponseWriter, r *http.Request) {
-		handleStatus(w, r, state)
+		if r.Method != http.MethodGet {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
 	})
 
-	http.HandleFunc("/stop", func(w http.ResponseWriter, r *http.Request) {
-		handleAudioRequest(w, r, state.AudioConfig.AudioPlayer.Stop)
+	http.HandleFunc("/input", func(w http.ResponseWriter, r *http.Request) {
+		log.Infof("Input endpoint called")
+
+		inputReq, err := processSpeechRequest(r)
+		if err != nil {
+			log.Errorf("%v", err)
+			return
+		}
+
+		err = speech.ProcessSpeech(*inputReq, state.AzureSubscriptionKey, state.AzureRegion, state.AudioPlayer)
+		if err != nil {
+			log.Errorf("%v", err)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
 	})
 
-	http.HandleFunc("/clear", func(w http.ResponseWriter, r *http.Request) {
-		handleAudioRequest(w, r, state.AudioConfig.AudioPlayer.Clear)
+	http.HandleFunc("/token", func(w http.ResponseWriter, r *http.Request) {
+		tokenReq, err := processSpeechRequest(r)
+		if err != nil {
+			log.Errorf("%v", err)
+			return
+		}
+
+		var sentences []string
+		var currentSentence string
+		for i, char := range tokenReq.Text {
+			if char == ',' || char == '.' || char == '!' || char == '?' {
+				sentences = append(sentences, currentSentence)
+				currentSentence = ""
+			} else {
+				currentSentence += string(char)
+				if i == len(tokenReq.Text)-1 {
+					sentences = append(sentences, currentSentence)
+				}
+			}
+		}
+
+		for _, sentence := range sentences {
+			audioData, err := azure.SynthesizeSpeech(state.AzureSubscriptionKey, state.AzureRegion, sentence, tokenReq.Gender, tokenReq.VoiceName)
+			if err != nil {
+				log.Errorf("%v", err)
+				return
+			}
+			state.AudioPlayer.Play(audioData)
+		}
+
+		w.WriteHeader(http.StatusOK)
 	})
 
 	http.HandleFunc("/pause", func(w http.ResponseWriter, r *http.Request) {
-		handleAudioRequest(w, r, state.AudioConfig.AudioPlayer.Pause)
-	})
-
-	http.HandleFunc("/resume", func(w http.ResponseWriter, r *http.Request) {
-		handleAudioRequest(w, r, state.AudioConfig.AudioPlayer.Resume)
-	})
-
-	http.HandleFunc("/toggle_playback", func(w http.ResponseWriter, r *http.Request) {
-		handleTogglePlayback(w, r, state)
-	})
-
-	http.HandleFunc("/exit_server", func(w http.ResponseWriter, r *http.Request) {
-		handleExitRequest(w, r)
-	})
-
-	go startHTTPServer(port)
-
-	state.ServerConfig.ServerRunning = true
-
-	if state.ConversationMode {
-		log.Info("Conversation Mode Enabled: Starting Speech Recognition")
-		err := state.ScribeConfig.SpeechRecognizer.Start(state.ScribeConfig.ScribeTextChan)
-		state.ScribeConfig.ScribeStatus = true
-		if err != nil {
-			logrus.Errorf("Error starting speech recognizer: %v", err)
+		if state.AudioPlayer != nil {
+			state.AudioPlayer.Pause()
+			w.WriteHeader(http.StatusOK)
+		} else {
+			log.Error("AudioPlayer not initialized")
 		}
-	}
+	})
 
-	// Start ScribeText in its own goroutine
-	go scribe.ScribeText(state)
+	http.HandleFunc("/stop", func(w http.ResponseWriter, r *http.Request) {
+		if state.AudioPlayer != nil {
+			state.AudioPlayer.Stop()
+			w.WriteHeader(http.StatusOK)
+		} else {
+			log.Error("AudioPlayer not initialized")
+		}
+	})
 
-	// Initialize and start the AudioPlayer in its own goroutine
-	state.AudioConfig.AudioPlayer = audioplayer.NewAudioPlayer(state.AudioConfig.AudioEntriesUpdate)
-	go state.AudioConfig.AudioPlayer.Start()
-}
-
-func handleAudioRequest(w http.ResponseWriter, r *http.Request, controlFunc func()) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-	controlFunc()
-	w.WriteHeader(http.StatusOK)
-}
-
-func handleTogglePlayback(w http.ResponseWriter, r *http.Request, state *state.AppState) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-	if state.AudioConfig.AudioPlayer.IsPlaying() {
-		state.AudioConfig.AudioPlayer.Pause()
-	} else {
-		state.AudioConfig.AudioPlayer.Resume()
-	}
-	w.WriteHeader(http.StatusOK)
-}
-
-func handleStatus(w http.ResponseWriter, r *http.Request, state *state.AppState) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-	status := AppStatus{
-		Port:                 state.ServerConfig.Port,
-		ServerAlreadyRunning: state.ServerConfig.ServerAlreadyRunning,
-		ScribeStatus:         state.ScribeConfig.ScribeStatus,
-	}
-	w.Header().Set("Content-Type", "application/json")
-	err := json.NewEncoder(w).Encode(status)
-	if err != nil {
-		log.Errorf("Failed to encode status response: %v", err)
-		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
-	}
-}
-
-func startHTTPServer(port int) {
 	addr := ":" + strconv.Itoa(port)
 	err := http.ListenAndServe(addr, nil)
 	if err != nil {
 		log.Errorf("%v", err)
 	}
+}
+
+// CheckServerRunning checks if the server is already running on the specified port.
+func CheckServerRunning(port int) bool {
+	timeout := 2 * time.Second
+	conn, err := net.DialTimeout("tcp", fmt.Sprintf(":%d", port), timeout)
+	if err != nil {
+		return false
+	}
+	conn.Close()
+	return true
 }
 
 // ConnectToServer connects to the server on the specified port and returns the response or an error.
@@ -155,41 +126,18 @@ func ConnectToServer(port int) (*http.Response, error) {
 	return resp, nil
 }
 
-func initializeSpeechRecognizer(state *state.AppState) {
-	recognizer, err := vosk.NewSpeechRecognizer(state.ScribeConfig.VoskModelPath)
+func processSpeechRequest(r *http.Request) (*speech.SpeechRequest, error) {
+	var req speech.SpeechRequest
+	bodyBytes, err := io.ReadAll(r.Body)
 	if err != nil {
-		logrus.Errorf("Failed to initialize Vosk speech recognizer: %v", err)
-	} else {
-		state.ScribeConfig.SpeechRecognizer = recognizer // Assigning the pointer directly
+		return nil, fmt.Errorf("failed to read request body: %v", err)
 	}
-}
+	defer r.Body.Close()
 
-func HandleServerState(appState *state.AppState) {
-	if !state.CheckServerRunning(appState.ServerConfig.Port) {
-		go StartServer(appState)
-		time.Sleep(100 * time.Millisecond) // Initial sleep to give server some time to start
-	} else {
-		resp, err := ConnectToServer(appState.ServerConfig.Port)
-		if err != nil {
-			log.Errorf("Failed to connect to the existing server on port %d: %v", appState.ServerConfig.Port, err)
-		} else {
-			log.Infof("Connected to the existing server on port %d. Status: %s", appState.ServerConfig.Port, resp.Status)
-			go func() {
-				os.Exit(0)
-			}()
-			resp.Body.Close()
-		}
+	err = json.Unmarshal(bodyBytes, &req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode request body: %v", err)
 	}
-}
 
-// handleExitRequest handles the /exit endpoint to gracefully shutdown the server.
-func handleExitRequest(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-	w.WriteHeader(http.StatusOK)
-	go func() {
-		os.Exit(0)
-	}()
+	return &req, nil
 }
