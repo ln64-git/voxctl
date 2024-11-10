@@ -24,6 +24,7 @@ func main() {
 
 	settingsConfig := config.GetConfig()
 
+	log.Info(flagsConfig.ClientInput)
 	// Populate state from configuration
 	initializeAppState(&flagsConfig, settingsConfig)
 
@@ -63,6 +64,7 @@ func processRequest(state types.AppState) {
 		defer resp.Body.Close()
 
 	case state.ClientInput != "":
+		log.Infof("Sending input: %s", state.ClientInput)
 		speechReq := speech.SpeechRequest{
 			Text: state.ClientInput,
 		}
@@ -90,13 +92,22 @@ func processRequest(state types.AppState) {
 }
 
 func parseFlags() types.AppState {
+	clientPort := flag.Int("port", 8080, "Port number to connect or serve")
+	clientInput := flag.String("input", "", "Input text to play")
+	serverStatusRequested := flag.Bool("status", false, "Request info")
+	serverQuitRequested := flag.Bool("quit", false, "Exit application after request")
+	serverPauseRequested := flag.Bool("pause", false, "Pause audio playback")
+	serverStopRequested := flag.Bool("stop", false, "Stop audio playback")
+
+	flag.Parse()
+
 	return types.AppState{
-		ClientPort:            *flag.Int("port", 8080, "Port number to connect or serve"),
-		ClientInput:           *flag.String("input", "", "Input text to play"),
-		ServerStatusRequested: *flag.Bool("status", false, "Request info"),
-		ServerQuitRequested:   *flag.Bool("quit", false, "Exit application after request"),
-		ServerPauseRequested:  *flag.Bool("pause", false, "Pause audio playback"),
-		ServerStopRequested:   *flag.Bool("stop", false, "Stop audio playback"),
+		ClientPort:            *clientPort,
+		ClientInput:           *clientInput,
+		ServerStatusRequested: *serverStatusRequested,
+		ServerQuitRequested:   *serverQuitRequested,
+		ServerPauseRequested:  *serverPauseRequested,
+		ServerStopRequested:   *serverStopRequested,
 	}
 }
 

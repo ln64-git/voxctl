@@ -27,8 +27,6 @@ func StartServer(state types.AppState) {
 	})
 
 	http.HandleFunc("/input", func(w http.ResponseWriter, r *http.Request) {
-		log.Infof("Input endpoint called")
-
 		inputReq, err := processSpeechRequest(r)
 		if err != nil {
 			log.Errorf("%v", err)
@@ -107,6 +105,8 @@ func processSpeechRequest(r *http.Request) (*speech.SpeechRequest, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode request body: %v", err)
 	}
+
+	log.Infof("Received request: %s", string(bodyBytes))
 
 	return &req, nil
 }
