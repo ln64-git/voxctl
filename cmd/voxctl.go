@@ -19,13 +19,9 @@ import (
 )
 
 func main() {
-	// Parse command-line flags
 	flagsConfig := parseFlags()
-
 	settingsConfig := config.GetConfig()
 
-	log.Info(flagsConfig.ClientInput)
-	// Populate state from configuration
 	initializeAppState(&flagsConfig, settingsConfig)
 
 	// Check if server is already running
