@@ -84,11 +84,14 @@ func CheckServerRunning(port int) bool {
 func ConnectToServer(port int) (*http.Response, error) {
 	resp, err := http.Get(fmt.Sprintf("http://localhost:%d/status", port))
 	if err != nil {
+		log.Errorf("Failed to connect to the server on port %d: %v", port, err)
 		return nil, fmt.Errorf("failed to connect to the server: %v", err)
 	}
 	if resp.StatusCode != http.StatusOK {
+		log.Errorf("Unexpected status code from server on port %d: %d", port, resp.StatusCode)
 		return resp, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
 	}
+	log.Infof("Connected to the server on port %d. Status: %s", port, resp.Status)
 	return resp, nil
 }
 

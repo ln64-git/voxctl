@@ -2,7 +2,6 @@ package config
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"os"
 	"os/user"
@@ -11,25 +10,34 @@ import (
 )
 
 // GetConfig retrieves the configuration from a JSON file in the user's home directory.
-func GetConfig(configName string) (map[string]interface{}, error) {
+func GetConfig() map[string]interface{} {
 	var cfg map[string]interface{}
 
 	// Get current user's home directory
 	user, err := user.Current()
 	if err != nil {
-		return nil, fmt.Errorf("error getting user's home directory: %v", err)
+		log.Fatalf("error getting user's home directory: %v", err)
 	}
+
+	configName := "voxctl.json"
 
 	// Construct file path
 	configFile := filepath.Join(user.HomeDir, configName)
 
+	// Check if the configuration file exists
+	if _, err := os.Stat(configFile); os.IsNotExist(err) {
+		log.Fatalf("configuration file does not exist: %s", configFile)
+	} else if err != nil {
+		log.Fatalf("error checking configuration file: %v", err)
+	}
+
 	// Load configuration
 	err = readConfig(configFile, &cfg)
 	if err != nil {
-		return nil, fmt.Errorf("error reading configuration: %v", err)
+		log.Fatalf("error reading configuration: %v", err)
 	}
 
-	return cfg, nil
+	return cfg
 }
 
 // readConfig reads and unmarshals the configuration file.

@@ -16,77 +16,35 @@ import (
 	"github.com/ln64-git/voxctl/internal/server"
 	"github.com/ln64-git/voxctl/internal/speech"
 	"github.com/ln64-git/voxctl/internal/types"
-	"github.com/sirupsen/logrus"
 )
 
 func main() {
 	// Parse command-line flags
-	flagPort := flag.Int("port", 8080, "Port number to connect or serve")
-	flagInput := flag.String("input", "", "Input text to play")
-	flagStatus := flag.Bool("status", false, "Request info")
-	flagQuit := flag.Bool("quit", false, "Exit application after request")
-	flagPause := flag.Bool("pause", false, "Pause audio playback")
-	flagStop := flag.Bool("stop", false, "Stop audio playback")
-	flag.Parse()
+	flagsConfig := parseFlags()
 
-	// Retrieve configuration
-	configName := "voxctl.json"
-	configData, err := config.GetConfig(configName)
-	if err != nil {
-		logrus.Fatalf("failed to load configuration: %v", err)
-	}
+	settingsConfig := config.GetConfig()
 
 	// Populate state from configuration
-	state := types.AppState{
-		ClientPort:            *flagPort,
-		ClientInput:           *flagInput,
-		ServerStatusRequested: *flagStatus,
-		ServerQuitRequested:   *flagQuit,
-		ServerPauseRequested:  *flagPause,
-		ServerStopRequested:   *flagStop,
-
-		VoiceService:                   config.GetStringOrDefault(configData, "VoiceService", ""),
-		ElevenLabsSubscriptionKey:      config.GetStringOrDefault(configData, "ElevenLabsSubscriptionKey", ""),
-		ElevenLabsVoiceModelID:         config.GetStringOrDefault(configData, "ElevenLabsVoiceModelID", "eleven_monolingual_v1"),
-		ElevenLabsVoiceStability:       config.GetFloat64OrDefault(configData, "ElevenLabsVoiceStability", 0.5),
-		ElevenLabsVoiceSimilarityBoost: config.GetFloat64OrDefault(configData, "ElevenLabsVoiceSimilarityBoost", 0.5),
-		ElevenLabsVoiceStyle:           config.GetFloat64OrDefault(configData, "ElevenLabsVoiceStyle", 0.5),
-		ElevenLabsVoiceUseSpeakerBoost: config.GetBoolOrDefault(configData, "ElevenLabsVoiceUseSpeakerBoost", false),
-
-		AzureSubscriptionKey: config.GetStringOrDefault(configData, "AzureSubscriptionKey", ""),
-		AzureRegion:          config.GetStringOrDefault(configData, "AzureRegion", "eastus"),
-		AzureVoiceGender:     config.GetStringOrDefault(configData, "AzureVoiceGender", "Female"),
-		AzureVoiceName:       config.GetStringOrDefault(configData, "AzureVoiceName", "en-US-JennyNeural"),
-
-		GoogleSubscriptionKey: config.GetStringOrDefault(configData, "GoogleSubscriptionKey", ""),
-		GoogleLanguageCode:    config.GetStringOrDefault(configData, "GoogleLanguageCode", "en-US"),
-		GoogleVoiceName:       config.GetStringOrDefault(configData, "GoogleVoiceName", "en-US-Wavenet-D"),
-
-		ServerAlreadyRunning: server.CheckServerRunning(*flagPort),
-	}
+	initializeAppState(&flagsConfig, settingsConfig)
 
 	// Check if server is already running
-	if !server.CheckServerRunning(state.ClientPort) {
-		state.AudioPlayer = audio.NewAudioPlayer()
-		go server.StartServer(state)
+	if !flagsConfig.ServerAlreadyRunning {
+		flagsConfig.AudioPlayer = audio.NewAudioPlayer()
+		go server.StartServer(flagsConfig)
 		time.Sleep(35 * time.Millisecond)
 	} else {
-		resp, err := server.ConnectToServer(state.ClientPort)
-		if err != nil {
-			log.Errorf("Failed to connect to the existing server on port %d: %v", state.ClientPort, err)
-		} else {
-			log.Infof("Connected to the existing server on port %d. Status: %s", state.ClientPort, resp.Status)
+		resp, err := server.ConnectToServer(flagsConfig.ClientPort)
+		if err == nil {
 			resp.Body.Close()
 		}
 	}
 
-	processRequest(state)
-	if state.ServerQuitRequested {
+	// Process request and exit on quit flag
+	processRequest(flagsConfig)
+	if flagsConfig.ServerQuitRequested {
 		log.Info("Quit flag requested, Program Exiting")
 		return
 	}
-
-	// Handle OS signals for graceful shutdown
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
@@ -105,7 +63,6 @@ func processRequest(state types.AppState) {
 		defer resp.Body.Close()
 
 	case state.ClientInput != "":
-		// log.Info(state.Input)
 		speechReq := speech.SpeechRequest{
 			Text: state.ClientInput,
 		}
@@ -130,4 +87,36 @@ func processRequest(state types.AppState) {
 		}
 		defer resp.Body.Close()
 	}
+}
+
+func parseFlags() types.AppState {
+	return types.AppState{
+		ClientPort:            *flag.Int("port", 8080, "Port number to connect or serve"),
+		ClientInput:           *flag.String("input", "", "Input text to play"),
+		ServerStatusRequested: *flag.Bool("status", false, "Request info"),
+		ServerQuitRequested:   *flag.Bool("quit", false, "Exit application after request"),
+		ServerPauseRequested:  *flag.Bool("pause", false, "Pause audio playback"),
+		ServerStopRequested:   *flag.Bool("stop", false, "Stop audio playback"),
+	}
+}
+
+func initializeAppState(state *types.AppState, configData map[string]interface{}) {
+	state.VoiceService = config.GetStringOrDefault(configData, "VoiceService", "")
+	state.ElevenLabsSubscriptionKey = config.GetStringOrDefault(configData, "ElevenLabsSubscriptionKey", "")
+	state.ElevenLabsVoiceModelID = config.GetStringOrDefault(configData, "ElevenLabsVoiceModelID", "eleven_monolingual_v1")
+	state.ElevenLabsVoiceStability = config.GetFloat64OrDefault(configData, "ElevenLabsVoiceStability", 0.5)
+	state.ElevenLabsVoiceSimilarityBoost = config.GetFloat64OrDefault(configData, "ElevenLabsVoiceSimilarityBoost", 0.5)
+	state.ElevenLabsVoiceStyle = config.GetFloat64OrDefault(configData, "ElevenLabsVoiceStyle", 0.5)
+	state.ElevenLabsVoiceUseSpeakerBoost = config.GetBoolOrDefault(configData, "ElevenLabsVoiceUseSpeakerBoost", false)
+
+	state.AzureSubscriptionKey = config.GetStringOrDefault(configData, "AzureSubscriptionKey", "")
+	state.AzureRegion = config.GetStringOrDefault(configData, "AzureRegion", "eastus")
+	state.AzureVoiceGender = config.GetStringOrDefault(configData, "AzureVoiceGender", "Female")
+	state.AzureVoiceName = config.GetStringOrDefault(configData, "AzureVoiceName", "en-US-JennyNeural")
+
+	state.GoogleSubscriptionKey = config.GetStringOrDefault(configData, "GoogleSubscriptionKey", "")
+	state.GoogleLanguageCode = config.GetStringOrDefault(configData, "GoogleLanguageCode", "en-US")
+	state.GoogleVoiceName = config.GetStringOrDefault(configData, "GoogleVoiceName", "en-US-Wavenet-D")
+
+	state.ServerAlreadyRunning = server.CheckServerRunning(state.ClientPort)
 }
